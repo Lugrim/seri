@@ -1,0 +1,39 @@
+---
+date: (timestamp)
+duration: (min)
+type: talk
+speakers: [alice, bob]
+
+Lorem ipsum dolor sit amet
+
+Azertyuip
+
+---
+date: (timestamp)
+duration: (min)
+type: meal
+
+Something to eat
+
+---
+date: (timestamp)
+duration: (min)
+speakers: [alice, bob]
+
+Lorem ipsum dolor sit amet
+
+---
+date: (timestamp)
+duration: (min)
+speakers: [alice, bob]
+type: fun
+
+Board games
+
+
+---
+date: (timestamp)
+duration: (min)
+speakers: [someone]
+
+Aled
