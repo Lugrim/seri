@@ -13,8 +13,11 @@
 		- [ ] timestamp
 		- [ ] duration
 	- [ ] Parse description as markdown
-- [ ] Add minimal frontends
+- [ ] Add frontends
 	- [ ] tikz
+		- [ ] minimal
+		- [ ] load preamble and postamble from files
 	- [ ] HTML
+		- [ ] minimal
 - [x] Documentation
-- [ ] Put clippy in giga chad mode
+- [x] Put clippy in giga chad mode

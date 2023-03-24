@@ -1,9 +1,13 @@
 [package]
-name = "timetable"
-version = "0.1.0"
+name = "seri"
+version = "0.1.1"
 edition = "2021"
 authors = ["Lugrim"]
+license = "ACSL"
 repository = "https://github.com/Lugrim/timetable-language"
+description = "A Domain Specific Language Compiler for organising events and exporting details to different formats"
+categories = ["command-line-utilities", "compilers", "date-and-time"]
+keywords = ["timetable"]
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 

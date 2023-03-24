@@ -4,8 +4,8 @@ use std::collections::HashMap;
 use std::str::FromStr;
 
 /// The type of a timetable event
-#[derive(Debug, PartialEq, Default)]
-enum EventType {
+#[derive(Debug, PartialEq, Eq, Default)]
+pub enum Type {
     /// A Talk by someone
     #[default]
     Talk,
@@ -17,15 +17,15 @@ enum EventType {
     Fun,
 }
 
-impl FromStr for EventType {
+impl FromStr for Type {
     type Err = ();
 
     fn from_str(input: &str) -> Result<Self, Self::Err> {
         match input.to_lowercase().as_str() {
-            "talk" => Ok(EventType::Talk),
-            "meal" => Ok(EventType::Meal),
-            "break" => Ok(EventType::Break),
-            "fun" => Ok(EventType::Fun),
+            "talk" => Ok(Self::Talk),
+            "meal" => Ok(Self::Meal),
+            "break" => Ok(Self::Break),
+            "fun" => Ok(Self::Fun),
             _ => Err(()),
         }
     }
@@ -35,9 +35,9 @@ impl FromStr for EventType {
 #[derive(Debug)]
 pub struct Event {
     /// The type of the event
-    event_type: EventType,
+    pub event_type: Type,
     /// The event description
-    description: String,
+    pub description: String,
 }
 
 /// Split header (cf grammar)
@@ -56,14 +56,11 @@ impl FromStr for Event {
         let trimmed = s.trim();
         if let Some((header, description)) = trimmed.split_once("\n\n") {
             let settings = split_pairs(header);
-            // println!("{:#?}", settings);
-            let event_type = if let Some(e) = &settings.get("type") {
-                EventType::from_str(e).unwrap_or_default()
-            } else {
-                EventType::Talk
-            };
+            let event_type = settings.get("type")
+                .as_ref()
+                .map_or(Type::Talk, |e| Type::from_str(e).unwrap_or_default());
 
-            Ok(Event {
+            Ok(Self {
                 event_type,
                 description: description.to_owned(),
             })
