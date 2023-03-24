@@ -4,8 +4,9 @@
 	- [x] Refactor base code
 	- [ ] Add passes chaining
 - [ ] Actually load data
-	- [ ] From stdin
-	- [ ] From file (CLAP)
+	- [x] From stdin
+	- [x] From file (CLAP)
+	- [ ] I/O Error management
 - [ ] Enhance backend
 	- [ ] Parse more headers
 		- [ ] speakers
@@ -15,3 +16,4 @@
 - [ ] Add minimal frontends
 	- [ ] tikz
 	- [ ] HTML
+- [ ] Documentation
