@@ -19,7 +19,10 @@
 #![warn(rustdoc::missing_crate_level_docs)]
 
 
-use crate::passes::{parser::ParseTimetable, CompilingPass};
+use crate::passes::{
+    parser::ParseTimetable,
+    latex::TikzFrontend,
+    CompilingPass};
 use std::{
     fs,
     io::Read,
@@ -48,5 +51,5 @@ fn main() {
                 String::from_utf8(buffer).unwrap()
             }, |filepath| fs::read_to_string(filepath).expect("Could not read file"));
 
-    println!("{:?}", ParseTimetable::apply(&content).unwrap());
+    println!("{:}", TikzFrontend::apply(ParseTimetable::apply(&content).unwrap()).unwrap());
 }

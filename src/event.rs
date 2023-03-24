@@ -2,6 +2,7 @@
 
 use std::collections::HashMap;
 use std::str::FromStr;
+use std::fmt;
 
 /// The type of a timetable event
 #[derive(Debug, PartialEq, Eq, Default)]
@@ -27,6 +28,17 @@ impl FromStr for Type {
             "break" => Ok(Self::Break),
             "fun" => Ok(Self::Fun),
             _ => Err(()),
+        }
+    }
+}
+
+impl fmt::Display for Type {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        match self {
+            Self::Talk => write!(f, "talk"),
+            Self::Meal => write!(f, "meal"),
+            Self::Break => write!(f, "break"),
+            Self::Fun => write!(f, "fun"),
         }
     }
 }

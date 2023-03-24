@@ -1,4 +1,5 @@
 ---
+title: Cryptography 101
 date: (timestamp)
 duration: (min)
 type: talk
@@ -9,6 +10,7 @@ Lorem ipsum dolor sit amet
 Azertyuip
 
 ---
+title: Yum
 date: (timestamp)
 duration: (min)
 type: meal
@@ -16,6 +18,7 @@ type: meal
 Something to eat
 
 ---
+title: Some other talk
 date: (timestamp)
 duration: (min)
 speakers: [alice, bob]
@@ -23,6 +26,7 @@ speakers: [alice, bob]
 Lorem ipsum dolor sit amet
 
 ---
+title: Fun time o/
 date: (timestamp)
 duration: (min)
 speakers: [alice, bob]
@@ -32,6 +36,7 @@ Board games
 
 
 ---
+title: Panic time
 date: (timestamp)
 duration: (min)
 speakers: [someone]
