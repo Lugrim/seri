@@ -1,6 +1,11 @@
 # TODO
 
 - [ ] Refactor as a compiler structure
+	- [x] Refactor base code
+	- [ ] Add passes chaining
+- [ ] Actually load data
+	- [ ] From stdin
+	- [ ] From file (CLAP)
 - [ ] Enhance backend
 	- [ ] Parse more headers
 		- [ ] speakers
