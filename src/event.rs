@@ -1,12 +1,19 @@
+//! Specification of a timetable event
+
 use std::collections::HashMap;
 use std::str::FromStr;
 
+/// The type of a timetable event
 #[derive(Debug, PartialEq, Default)]
 enum EventType {
+    /// A Talk by someone
     #[default]
     Talk,
+    /// A Meal (we like food)
     Meal,
+    /// A Coffee Break
     Break,
+    /// Fun time!
     Fun,
 }
 
@@ -24,13 +31,17 @@ impl FromStr for EventType {
     }
 }
 
+/// A timetable event
 #[derive(Debug)]
 pub struct Event {
+    /// The type of the event
     event_type: EventType,
+    /// The event description
     description: String,
 }
 
-fn split_kv(string: &str) -> HashMap<&str, &str> {
+/// Split header (cf grammar)
+fn split_pairs(string: &str) -> HashMap<&str, &str> {
     string
         .split('\n')
         .map(|s| s.split_at(s.find(':').unwrap()))
@@ -44,7 +55,7 @@ impl FromStr for Event {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let trimmed = s.trim();
         if let Some((header, description)) = trimmed.split_once("\n\n") {
-            let settings = split_kv(header);
+            let settings = split_pairs(header);
             // println!("{:#?}", settings);
             let event_type = if let Some(e) = &settings.get("type") {
                 EventType::from_str(e).unwrap_or_default()

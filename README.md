@@ -16,4 +16,5 @@
 - [ ] Add minimal frontends
 	- [ ] tikz
 	- [ ] HTML
-- [ ] Documentation
+- [x] Documentation
+- [ ] Put clippy in giga chad mode
