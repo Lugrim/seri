@@ -48,6 +48,8 @@ impl fmt::Display for Type {
 pub struct Event {
     /// The type of the event
     pub event_type: Type,
+    /// The title of the event
+    pub title: String,
     /// The event description
     pub description: String,
 }
@@ -71,9 +73,11 @@ impl FromStr for Event {
             let event_type = settings.get("type")
                 .as_ref()
                 .map_or(Type::Talk, |e| Type::from_str(e).unwrap_or_default());
+            let title = settings.get("title").map_or("(no title)", |&e| e);
 
             Ok(Self {
                 event_type,
+                title: title.to_owned(),
                 description: description.to_owned(),
             })
         } else {

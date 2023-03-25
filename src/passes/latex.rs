@@ -102,7 +102,11 @@ impl CompilingPass<Vec<Event>, String, ()> for TikzFrontend {
         r += ",";
         r += & (9 + i).to_string(); // TODO Compute time
         r += ") {";
-        r += "(title)"; // TODO Title
+        let (short_title, title_overflow) = e.title.split_at(std::cmp::min(50, e.title.len()));
+        r += short_title;
+        if !title_overflow.is_empty() {
+            r += "...";
+        }
         r += "};\n";
     }
 
