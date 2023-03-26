@@ -20,10 +20,14 @@
 #![warn(rustdoc::missing_crate_level_docs)]
 
 
-use crate::passes::{
-    parser::ParseTimetable,
-    latex::TikzFrontend,
-    CompilingPass};
+use crate::{
+    passes::{
+        parser::ParseTimetable,
+        latex::TikzFrontend,
+        PassInput,
+    },
+    event::Event,
+};
 use std::{
     fs,
     io::Read,
@@ -42,6 +46,9 @@ struct Args {
     file: Option<String>,
 }
 
+impl PassInput for &str {}
+impl PassInput for Vec<Event> {}
+
 fn main() {
     let args = Args::parse();
 
@@ -52,5 +59,8 @@ fn main() {
                 String::from_utf8(buffer).unwrap()
             }, |filepath| fs::read_to_string(filepath).expect("Could not read file"));
 
-    println!("{:}", TikzFrontend::apply(ParseTimetable::apply(&content).unwrap()).unwrap());
+    let out = &content.as_str()
+        .chain_pass::<ParseTimetable, Vec<Event>, ()>().unwrap()
+        .chain_pass::<TikzFrontend, String, ()>().unwrap();
+    println!("{:}", out);
 }

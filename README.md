@@ -3,17 +3,20 @@
 - [ ] Refactor as a compiler structure
 	- [x] Refactor base code
 	- [ ] Add passes chaining
+		- [x] Trait bound pass chaining
+		- [ ] Find a less redundant way to define chaining?
+	- [ ] Stop being stupid and put frontend / backend in the right order
 - [ ] Actually load data
 	- [x] From stdin
 	- [x] From file (CLAP)
 	- [ ] I/O Error management
-- [ ] Enhance backend
+- [ ] Enhance frontend
 	- [ ] Parse more headers
 		- [ ] speakers
 		- [x] timestamp
 		- [x] duration
 	- [ ] Parse description as markdown
-- [ ] Add frontends
+- [ ] Add backends
 	- [ ] tikz
 		- [x] minimal
 		- [x] Print day in header

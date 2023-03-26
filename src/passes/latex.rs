@@ -9,6 +9,8 @@ use crate::{
     event::Event
 };
 
+use super::PassInput;
+
 /// Frontend outputing events to a standalone LaTeX document containing a Tikz timetable
 pub struct TikzFrontend {
 }
@@ -194,3 +196,4 @@ impl CompilingPass<Vec<Event>, String, ()> for TikzFrontend {
     Ok(r)
    }
 }
+
