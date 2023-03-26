@@ -24,7 +24,7 @@ fn find_bounding_box(events: &Vec<Event>) -> (DateTime<Local>, DateTime<Local>) 
             up_left = up_left.with_hour(e.start_date.hour()).unwrap();
             up_left = up_left.with_minute(e.start_date.minute()).unwrap();
         }
-        if e.start_date.day() < up_left.day() {
+        if e.start_date.date_naive() < up_left.date_naive() {
             up_left = up_left.with_day(e.start_date.day()).unwrap();
         }
         if (e.start_date + Duration::minutes(i64::from(e.duration))).time() > down_right.time() {
@@ -35,8 +35,11 @@ fn find_bounding_box(events: &Vec<Event>) -> (DateTime<Local>, DateTime<Local>) 
                 .map(|h| h.add(Duration::minutes(i64::from(e.duration))))
                 .unwrap();
         }
-        if e.start_date.day() > down_right.day() {
-            down_right = down_right.with_day(e.start_date.day()).unwrap();
+        if e.start_date.date_naive() > down_right.date_naive() {
+            down_right = down_right
+                .with_day(e.start_date.day()).unwrap()
+                .with_month(e.start_date.month()).unwrap()
+                .with_year(e.start_date.year()).unwrap();
         }
     }
 
@@ -153,11 +156,19 @@ impl CompilingPass<Vec<Event>, String, ()> for TikzFrontend {
     r += &format!("{}", day_end);
     r += r", \time);";
 
-
-    eprintln!("{}, {}", up_left, down_right);
+    for i in 0..day_count {
+        let col = i + 1;
+	    r += r"
+        \node[anchor=south] at (";
+        r += &format!("{col}");
+        r += r".5, 8.5) {";
+        r += &format!("{}", (up_left + Duration::days(i)).format("%A, %B %e"));
+        r += r"};";
+    }
 
     for e in events {
-        r += r"\node[";
+        r += r"
+    \node[";
         r += &format!("{}", e.event_type);
         r += "={";
         r += &format!("{:.2}",f64::from(e.duration) / 60.);
@@ -176,10 +187,10 @@ impl CompilingPass<Vec<Event>, String, ()> for TikzFrontend {
         if !title_overflow.is_empty() {
             r += "...";
         }
-        r += "};\n";
+        r += "};";
     }
 
     r += POSTAMBLE;
     Ok(r)
-    }
+   }
 }

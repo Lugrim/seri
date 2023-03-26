@@ -10,12 +10,13 @@
 - [ ] Enhance backend
 	- [ ] Parse more headers
 		- [ ] speakers
-		- [ ] timestamp
-		- [ ] duration
+		- [x] timestamp
+		- [x] duration
 	- [ ] Parse description as markdown
 - [ ] Add frontends
 	- [ ] tikz
-		- [ ] minimal
+		- [x] minimal
+		- [x] Print day in header
 		- [ ] load preamble and postamble from files
 	- [ ] HTML
 		- [ ] minimal
