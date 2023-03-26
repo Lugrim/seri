@@ -1,6 +1,8 @@
 //! Latex frontends
 
-use chrono::{Timelike, Local, Datelike, DateTime};
+use std::ops::Add;
+
+use chrono::{Timelike, Local, Datelike, DateTime, Duration};
 
 use crate::{
     passes::CompilingPass,
@@ -11,7 +13,6 @@ use crate::{
 pub struct TikzFrontend {
 }
 
-/// TODO Use duration too
 /// TODO Do not assume everything is in the same month
 /// Will find the bounding box (date, times) to generate a timetable
 fn find_bounding_box(events: &Vec<Event>) -> (DateTime<Local>, DateTime<Local>) {
@@ -19,14 +20,20 @@ fn find_bounding_box(events: &Vec<Event>) -> (DateTime<Local>, DateTime<Local>) 
     let mut up_left = events.get(0).unwrap().start_date;
     let mut down_right = events.get(0).unwrap().start_date;
     for e in events {
-        if e.start_date.hour() < up_left.hour() {
+        if e.start_date.time() < up_left.time() {
             up_left = up_left.with_hour(e.start_date.hour()).unwrap();
+            up_left = up_left.with_minute(e.start_date.minute()).unwrap();
         }
         if e.start_date.day() < up_left.day() {
             up_left = up_left.with_day(e.start_date.day()).unwrap();
         }
-        if e.start_date.hour() + e.duration /60 > down_right.hour() {
-            down_right = down_right.with_hour(e.start_date.hour()).unwrap();
+        if (e.start_date + Duration::minutes(i64::from(e.duration))).time() > down_right.time() {
+            down_right = down_right
+                .with_hour(e.start_date.hour())
+                .unwrap()
+                .with_minute(e.start_date.minute())
+                .map(|h| h.add(Duration::minutes(i64::from(e.duration))))
+                .unwrap();
         }
         if e.start_date.day() > down_right.day() {
             down_right = down_right.with_day(e.start_date.day()).unwrap();
@@ -38,8 +45,29 @@ fn find_bounding_box(events: &Vec<Event>) -> (DateTime<Local>, DateTime<Local>) 
 
 impl CompilingPass<Vec<Event>, String, ()> for TikzFrontend {
     fn apply(events: Vec<Event>) -> Result<String, ()> {
-    const PREAMBLE: &str = r"
-\documentclass{standalone}
+    const POSTAMBLE: &str = r"
+\end{tikzpicture}
+\end{document}";
+	
+    let (up_left, down_right) = find_bounding_box(&events);
+
+    let first_hour = up_left.hour();
+    let last_hour = down_right.hour() + 1;
+
+    let day_count = (down_right
+        .with_hour(0)
+        .unwrap()
+        .with_minute(0)
+        .unwrap()
+        -
+        up_left
+        .with_hour(0)
+        .unwrap()
+        .with_minute(0)
+        .unwrap()).num_days() + 1;
+
+    let day_end = day_count + 1;
+    let mut r: String = r"\documentclass{standalone}
 \usepackage{tikz}
 
 \begin{document}
@@ -95,28 +123,38 @@ impl CompilingPass<Vec<Event>, String, ()> for TikzFrontend {
 % coordinate to correspond to hours (y should point downwards).
 \begin{tikzpicture}[y=-\hourheight,x=\daywidth]
 
-    % First print a list of times.
-	\foreach \time   [evaluate=\time] in {8,...,22}
-        \node[anchor=north east] at (1,\time) {\time:00};
+    % First print a list of times.".to_owned();
 
+    let foreach = r"
+    \foreach \time   [evaluate=\time] in ".to_owned()
+        + &format!("{{{first_hour},...,{last_hour}}}");
+
+    r += &foreach;
+    r += r"
+            \node[anchor=east] at (1,\time) {\time:00};";
+    
+    r += r"
     % Draw some day dividers.
-    \draw (1,6.5) -- (1,23);
-    \draw (2,6.5) -- (2,23);
-    \draw (3,6.5) -- (3,23);
+    \foreach \day   [evaluate=\day] in ";
+    r += &format!("{{1,...,{day_end}}}");
 
-	% Draw some hours dividers.
-	\foreach \time   [evaluate=\time] in {8,...,22}
-        \draw (1,\time) -- (3,\time);
+    r +=r"
+        \draw (\day,";
+    r += &format!("{}", first_hour - 1);
+    r += r") -- (\day,";
+    r += &format!("{}", last_hour);
+    r += ");";
 
-";
+    r += r"
+	% Draw some hours dividers.";
+    r += &foreach;
+    r +=r"
+        \draw (1,\time) -- (";
+    r += &format!("{}", day_end);
+    r += r", \time);";
 
-    const POSTAMBLE: &str = r"
-\end{tikzpicture}
-\end{document}";
 
-    let mut r: String = PREAMBLE.to_owned();
-
-    let (up_left, down_right) = find_bounding_box(&events);
+    eprintln!("{}, {}", up_left, down_right);
 
     for e in events {
         r += r"\node[";
@@ -129,7 +167,7 @@ impl CompilingPass<Vec<Event>, String, ()> for TikzFrontend {
         r += &format!("{}",
                       e.start_date.day() - up_left.day() + 1);
         r += ",";
-        r += &format!("{}.{}",
+        r += &format!("{}.{:.2}",
                       e.start_date.format("%H"),
                       e.start_date.minute() * 5 / 3);
         r += ") {";
