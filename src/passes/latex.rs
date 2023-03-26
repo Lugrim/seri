@@ -15,21 +15,21 @@ pub struct TikzFrontend {
 /// TODO Do not assume everything is in the same month
 /// Will find the bounding box (date, times) to generate a timetable
 fn find_bounding_box(events: &Vec<Event>) -> (DateTime<Local>, DateTime<Local>) {
-    assert!(!events.is_empty(), "{}", panic!("Can't generate Tikz diagram from empty event list"));
+    assert!(!events.is_empty(), "{}", "Can't generate Tikz diagram from empty event list");
     let mut up_left = events.get(0).unwrap().start_date;
     let mut down_right = events.get(0).unwrap().start_date;
     for e in events {
-        if e.start_date.hour() > down_right.hour() {
-            down_right = down_right.with_hour(e.start_date.hour()).unwrap();
-        }
-        if e.start_date.day() > down_right.day() {
-            down_right = down_right.with_day(e.start_date.day()).unwrap();
-        }
         if e.start_date.hour() < up_left.hour() {
             up_left = up_left.with_hour(e.start_date.hour()).unwrap();
         }
         if e.start_date.day() < up_left.day() {
             up_left = up_left.with_day(e.start_date.day()).unwrap();
+        }
+        if e.start_date.hour() + e.duration /60 > down_right.hour() {
+            down_right = down_right.with_hour(e.start_date.hour()).unwrap();
+        }
+        if e.start_date.day() > down_right.day() {
+            down_right = down_right.with_day(e.start_date.day()).unwrap();
         }
     }
 
@@ -122,7 +122,7 @@ impl CompilingPass<Vec<Event>, String, ()> for TikzFrontend {
         r += r"\node[";
         r += &format!("{}", e.event_type);
         r += "={";
-        r += "0.5"; // TODO Duration
+        r += &format!("{:.2}",f64::from(e.duration) / 60.);
         r += "}{";
         r += "1"; // TODO Compute simultaneous events
         r += "}] at (";

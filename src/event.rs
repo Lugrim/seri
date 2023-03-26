@@ -53,6 +53,8 @@ pub struct Event {
     pub title: String,
     /// The beginning of the event
     pub start_date: DateTime<Local>,
+    /// The duration of the event (in minutes)
+    pub duration: u32,
     /// The event description
     pub description: String,
 }
@@ -81,10 +83,14 @@ impl FromStr for Event {
                 .datetime_from_str(settings.get("date").expect("No `date` field found"),
                     "%Y-%m-%d %H:%M")
                 .expect("Invalid date shape.");
+            let duration = settings.get("duration")
+                .map(|e| e.parse().expect("Could not parse duration."))
+                .expect("Could not get duration.");
 
             Ok(Self {
                 event_type,
                 start_date,
+                duration,
                 title: title.to_owned(),
                 description: description.to_owned(),
             })
