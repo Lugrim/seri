@@ -1,6 +1,6 @@
 ---
 title: Cryptography 101
-date: (timestamp)
+date: 2023-04-27 10:10
 duration: (min)
 type: talk
 speakers: [alice, bob]
@@ -11,7 +11,7 @@ Azertyuip
 
 ---
 title: Yum
-date: (timestamp)
+date: 2023-04-27 13:12
 duration: (min)
 type: meal
 
@@ -19,7 +19,7 @@ Something to eat
 
 ---
 title: Some other talk
-date: (timestamp)
+date: 2023-04-27 15:00
 duration: (min)
 speakers: [alice, bob]
 
@@ -27,7 +27,7 @@ Lorem ipsum dolor sit amet
 
 ---
 title: Fun time o/
-date: (timestamp)
+date: 2023-04-28 10:00
 duration: (min)
 speakers: [alice, bob]
 type: fun
@@ -36,8 +36,8 @@ Board games
 
 
 ---
-title: Panic time
-date: (timestamp)
+title: This is a very long title, about some probably very interesting research topic, however, the title is waaaay to verbose for anyone to care to read
+date: 2023-04-28 12:34
 duration: (min)
 speakers: [someone]
 

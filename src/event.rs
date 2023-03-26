@@ -3,6 +3,7 @@
 use std::collections::HashMap;
 use std::str::FromStr;
 use std::fmt;
+use chrono::prelude::*;
 
 /// The type of a timetable event
 #[derive(Debug, PartialEq, Eq, Default)]
@@ -50,6 +51,8 @@ pub struct Event {
     pub event_type: Type,
     /// The title of the event
     pub title: String,
+    /// The beginning of the event
+    pub start_date: DateTime<Local>,
     /// The event description
     pub description: String,
 }
@@ -74,9 +77,14 @@ impl FromStr for Event {
                 .as_ref()
                 .map_or(Type::Talk, |e| Type::from_str(e).unwrap_or_default());
             let title = settings.get("title").map_or("(no title)", |&e| e);
+            let start_date = Local
+                .datetime_from_str(settings.get("date").expect("No `date` field found"),
+                    "%Y-%m-%d %H:%M")
+                .expect("Invalid date shape.");
 
             Ok(Self {
                 event_type,
+                start_date,
                 title: title.to_owned(),
                 description: description.to_owned(),
             })

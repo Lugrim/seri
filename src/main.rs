@@ -3,6 +3,7 @@
 
 // Make clippy quite nasty
 #![deny(clippy::cargo)] // Checks for garbage in the Cargo TOML files
+#![allow(clippy::multiple_crate_versions)] // Dependencies doing bad things
 #![deny(clippy::complexity)] // Checks for needlessly complex structures
 #![deny(clippy::correctness)] // Checks for common invalid usage and workarounds
 #![deny(clippy::nursery)] // Checks for things that are typically forgotten by learners
