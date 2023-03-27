@@ -3,65 +3,87 @@
 use std::{ops::Add, str::FromStr};
 
 use chrono::{DateTime, Datelike, Duration, Local, Timelike};
+use thiserror::Error;
 
 use crate::{event::Event, passes::CompilingPass};
 
 /// Frontend outputing events to a standalone LaTeX document containing a Tikz timetable
 pub struct TikzFrontend {}
 
-/// TODO Do not assume everything is in the same month
-/// Will find the bounding box (date, times) to generate a timetable
-fn find_bounding_box(events: &Vec<Event>) -> (DateTime<Local>, DateTime<Local>) {
-    assert!(
-        !events.is_empty(),
-        "{}",
-        "Can't generate Tikz diagram from empty event list"
-    );
-    let mut up_left = events.get(0).unwrap().start_date;
-    let mut down_right = events.get(0).unwrap().start_date;
-    for e in events {
-        if e.start_date.time() < up_left.time() {
-            up_left = up_left.with_hour(e.start_date.hour()).unwrap();
-            up_left = up_left.with_minute(e.start_date.minute()).unwrap();
-        }
-        if e.start_date.date_naive() < up_left.date_naive() {
-            up_left = up_left.with_day(e.start_date.day()).unwrap();
-        }
-        if (e.start_date + Duration::minutes(i64::from(e.duration))).time() > down_right.time() {
-            down_right = down_right
-                .with_hour(e.start_date.hour())
-                .unwrap()
-                .with_minute(e.start_date.minute())
-                .map(|h| h.add(Duration::minutes(i64::from(e.duration))))
-                .unwrap();
-        }
-        if e.start_date.date_naive() > down_right.date_naive() {
-            down_right = down_right
-                .with_day(e.start_date.day())
-                .unwrap()
-                .with_month(e.start_date.month())
-                .unwrap()
-                .with_year(e.start_date.year())
-                .unwrap();
-        }
-    }
-
-    (up_left, down_right)
+/// Bounding box of event.
+///
+/// This structure contains datetimes that allows to draw a box containing all the events from which
+/// it was built in a calendar view.
+pub struct BoundingBox {
+    up_left: DateTime<Local>,
+    down_right: DateTime<Local>,
 }
 
-impl CompilingPass<Vec<Event>, String, <Event as FromStr>::Err> for TikzFrontend {
-    fn apply(events: Vec<Event>) -> Result<String, <Event as FromStr>::Err> {
+/// TODO Do not assume everything is in the same month
+/// Will find the bounding box (date, times) to generate a timetable
+fn find_bounding_box(events: &Vec<Event>) -> Option<BoundingBox> {
+    events.get(0).map(|first| {
+        let mut up_left = first.start_date;
+        let mut down_right = first.start_date;
+        for e in events {
+            if e.start_date.time() < up_left.time() {
+                up_left = up_left.with_hour(e.start_date.hour()).unwrap();
+                up_left = up_left.with_minute(e.start_date.minute()).unwrap();
+            }
+            if e.start_date.date_naive() < up_left.date_naive() {
+                up_left = up_left.with_day(e.start_date.day()).unwrap();
+            }
+            if (e.start_date + Duration::minutes(i64::from(e.duration))).time() > down_right.time()
+            {
+                down_right = down_right
+                    .with_hour(e.start_date.hour())
+                    .unwrap()
+                    .with_minute(e.start_date.minute())
+                    .map(|h| h.add(Duration::minutes(i64::from(e.duration))))
+                    .unwrap();
+            }
+            if e.start_date.date_naive() > down_right.date_naive() {
+                down_right = down_right
+                    .with_day(e.start_date.day())
+                    .unwrap()
+                    .with_month(e.start_date.month())
+                    .unwrap()
+                    .with_year(e.start_date.year())
+                    .unwrap();
+            }
+        }
+
+        BoundingBox {
+            up_left,
+            down_right,
+        }
+    })
+}
+
+/// Error occuring when compiling an event list to tikz.
+#[derive(Debug, Error)]
+pub enum TikzBackendCompilationError {
+    /// The event could not be parsed.
+    #[error(transparent)]
+    CouldNotParseEvent(#[from] <Event as FromStr>::Err),
+    #[error("no event was provided")]
+    /// The list of events was empty.
+    NoEventProvided,
+}
+
+impl CompilingPass<Vec<Event>, String, TikzBackendCompilationError> for TikzFrontend {
+    fn apply(events: Vec<Event>) -> Result<String, TikzBackendCompilationError> {
         const POSTAMBLE: &str = r"
 \end{tikzpicture}
 \end{document}";
 
-        let (up_left, down_right) = find_bounding_box(&events);
+        let bb = find_bounding_box(&events).ok_or(TikzBackendCompilationError::NoEventProvided)?;
 
-        let first_hour = up_left.hour();
-        let last_hour = down_right.hour() + 1;
+        let first_hour = bb.up_left.hour();
+        let last_hour = bb.down_right.hour() + 1;
 
-        let day_count = (down_right.with_hour(0).unwrap().with_minute(0).unwrap()
-            - up_left.with_hour(0).unwrap().with_minute(0).unwrap())
+        let day_count = (bb.down_right.with_hour(0).unwrap().with_minute(0).unwrap()
+            - bb.up_left.with_hour(0).unwrap().with_minute(0).unwrap())
         .num_days()
             + 1;
 
@@ -160,7 +182,7 @@ impl CompilingPass<Vec<Event>, String, <Event as FromStr>::Err> for TikzFrontend
         \node[anchor=south] at (";
             r += &format!("{col}");
             r += r".5, 8.5) {";
-            r += &format!("{}", (up_left + Duration::days(i)).format("%A, %B %e"));
+            r += &format!("{}", (bb.up_left + Duration::days(i)).format("%A, %B %e"));
             r += r"};";
         }
 
@@ -173,7 +195,7 @@ impl CompilingPass<Vec<Event>, String, <Event as FromStr>::Err> for TikzFrontend
             r += "}{";
             r += "1"; // TODO Compute simultaneous events
             r += "}] at (";
-            r += &format!("{}", e.start_date.day() - up_left.day() + 1);
+            r += &format!("{}", e.start_date.day() - bb.up_left.day() + 1);
             r += ",";
             r += &format!(
                 "{}.{:.2}",
