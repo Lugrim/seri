@@ -80,21 +80,7 @@ pub enum TikzBackendCompilationError {
     NoEventProvided,
 }
 
-impl CompilingPass<Vec<Event>, String, TikzBackendCompilationError> for TikzFrontend {
-    fn apply(events: Vec<Event>) -> Result<String, TikzBackendCompilationError> {
-        const POSTAMBLE: &str = r"
-\end{tikzpicture}
-\end{document}";
-
-        let bb = find_bounding_box(&events).ok_or(TikzBackendCompilationError::NoEventProvided)?;
-
-        let first_hour = bb.up_left.hour();
-        let last_hour = bb.down_right.hour() + 1;
-
-        let day_count = (bb.last_day().unwrap() - bb.first_day().unwrap()).num_days() + 1;
-        let day_end = day_count + 1;
-
-        let mut r: String = r"\documentclass{standalone}
+const LATEX_INTRO: &str = r"\documentclass{standalone}
 \usepackage{tikz}
 
 \begin{document}
@@ -150,8 +136,23 @@ impl CompilingPass<Vec<Event>, String, TikzBackendCompilationError> for TikzFron
 % coordinate to correspond to hours (y should point downwards).
 \begin{tikzpicture}[y=-\hourheight,x=\daywidth]
 
-    % First print a list of times."
-            .to_owned();
+    % First print a list of times.";
+
+impl CompilingPass<Vec<Event>, String, TikzBackendCompilationError> for TikzFrontend {
+    fn apply(events: Vec<Event>) -> Result<String, TikzBackendCompilationError> {
+        const POSTAMBLE: &str = r"
+\end{tikzpicture}
+\end{document}";
+
+        let bb = find_bounding_box(&events).ok_or(TikzBackendCompilationError::NoEventProvided)?;
+
+        let first_hour = bb.up_left.hour();
+        let last_hour = bb.down_right.hour() + 1;
+
+        let day_count = (bb.last_day().unwrap() - bb.first_day().unwrap()).num_days() + 1;
+        let day_end = day_count + 1;
+
+        let mut r: String = LATEX_INTRO.to_owned();
 
         let foreach = r"
     \foreach \time   [evaluate=\time] in "
@@ -171,7 +172,7 @@ impl CompilingPass<Vec<Event>, String, TikzBackendCompilationError> for TikzFron
         \draw (\day,";
         r += &format!("{}", first_hour - 1);
         r += r") -- (\day,";
-        r += &format!("{}", last_hour);
+        r += &format!("{last_hour}");
         r += ");";
 
         r += r"
@@ -179,7 +180,7 @@ impl CompilingPass<Vec<Event>, String, TikzBackendCompilationError> for TikzFron
         r += &foreach;
         r += r"
         \draw (1,\time) -- (";
-        r += &format!("{}", day_end);
+        r += &format!("{day_end}");
         r += r", \time);";
 
         for i in 0..day_count {
