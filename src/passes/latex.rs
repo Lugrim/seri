@@ -22,41 +22,36 @@ pub struct BoundingBox {
 /// TODO Do not assume everything is in the same month
 /// Will find the bounding box (date, times) to generate a timetable
 fn find_bounding_box(events: &Vec<Event>) -> Option<BoundingBox> {
-    events.get(0).map(|first| {
+    events.get(0).and_then(|first| {
         let mut up_left = first.start_date;
         let mut down_right = first.start_date;
         for e in events {
             if e.start_date.time() < up_left.time() {
-                up_left = up_left.with_hour(e.start_date.hour()).unwrap();
-                up_left = up_left.with_minute(e.start_date.minute()).unwrap();
+                up_left = up_left.with_hour(e.start_date.hour())?;
+                up_left = up_left.with_minute(e.start_date.minute())?;
             }
             if e.start_date.date_naive() < up_left.date_naive() {
-                up_left = up_left.with_day(e.start_date.day()).unwrap();
+                up_left = up_left.with_day(e.start_date.day())?;
             }
             if (e.start_date + Duration::minutes(i64::from(e.duration))).time() > down_right.time()
             {
                 down_right = down_right
-                    .with_hour(e.start_date.hour())
-                    .unwrap()
+                    .with_hour(e.start_date.hour())?
                     .with_minute(e.start_date.minute())
-                    .map(|h| h.add(Duration::minutes(i64::from(e.duration))))
-                    .unwrap();
+                    .map(|h| h.add(Duration::minutes(i64::from(e.duration))))?;
             }
             if e.start_date.date_naive() > down_right.date_naive() {
                 down_right = down_right
-                    .with_day(e.start_date.day())
-                    .unwrap()
-                    .with_month(e.start_date.month())
-                    .unwrap()
-                    .with_year(e.start_date.year())
-                    .unwrap();
+                    .with_day(e.start_date.day())?
+                    .with_month(e.start_date.month())?
+                    .with_year(e.start_date.year())?;
             }
         }
 
-        BoundingBox {
+        Some(BoundingBox {
             up_left,
             down_right,
-        }
+        })
     })
 }
 
