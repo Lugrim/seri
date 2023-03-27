@@ -65,12 +65,21 @@ pub struct Event {
     pub description: String,
 }
 
+/// The line of configuration given by the user is not a valid "key:value" pair.
+#[derive(Debug, Error)]
+#[error("line `{0}` is not a valid field")]
+pub struct InvalidField(pub String);
+
 /// Split header (cf grammar)
-fn split_pairs(string: &str) -> HashMap<&str, &str> {
+fn split_pairs(string: &str) -> Result<HashMap<&str, &str>, InvalidField> {
     string
         .split('\n')
-        .map(|s| s.split_at(s.find(':').unwrap()))
-        .map(|(key, val)| (key, val[1..].trim()))
+        .map(|s| {
+            s.find(':')
+                .ok_or_else(|| InvalidField(s.to_owned()))
+                .map(|pos| s.split_at(pos))
+        })
+        .map(|field| field.map(|(key, val)| (key, val[1..].trim())))
         .collect()
 }
 
@@ -99,6 +108,10 @@ pub enum ParsingError {
     /// The type of talk provided by the user is not valid.
     #[error(transparent)]
     InvalidTalkType(#[from] InvalidTalkType),
+
+    /// a line of configuration given as input is not a valid "key:value" pair.
+    #[error(transparent)]
+    InvalidField(#[from] InvalidField),
 }
 
 impl FromStr for Event {
@@ -107,7 +120,7 @@ impl FromStr for Event {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let trimmed = s.trim();
         if let Some((header, description)) = trimmed.split_once("\n\n") {
-            let settings = split_pairs(header);
+            let settings = split_pairs(header)?;
 
             let event_type = settings
                 .get("type")
