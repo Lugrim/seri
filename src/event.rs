@@ -20,8 +20,13 @@ pub enum Type {
     Fun,
 }
 
+/// The type of talk provided is not valid.
+#[derive(Debug, Error)]
+#[error("`{0} is not a valid type of talk`")]
+pub struct InvalidTalkType(pub String);
+
 impl FromStr for Type {
-    type Err = ();
+    type Err = InvalidTalkType;
 
     fn from_str(input: &str) -> Result<Self, Self::Err> {
         match input.to_lowercase().as_str() {
@@ -29,7 +34,7 @@ impl FromStr for Type {
             "meal" => Ok(Self::Meal),
             "break" => Ok(Self::Break),
             "fun" => Ok(Self::Fun),
-            _ => Err(()),
+            tt => Err(InvalidTalkType(tt.to_owned())),
         }
     }
 }
@@ -92,11 +97,8 @@ pub enum ParsingError {
     CouldNotSplit,
 
     /// The type of talk provided by the user is not valid.
-    #[error("`{talk_type}` is not a valid talk type")]
-    InvalidTalkType {
-        /// talk type provided by the user
-        talk_type: String,
-    },
+    #[error(transparent)]
+    InvalidTalkType(#[from] InvalidTalkType),
 }
 
 impl FromStr for Event {
@@ -111,9 +113,7 @@ impl FromStr for Event {
                 .get("type")
                 .as_ref()
                 .map_or(Ok(Type::Talk), |talk_type| {
-                    Type::from_str(talk_type).map_err(|_| ParsingError::InvalidTalkType {
-                        talk_type: (**talk_type).to_string(),
-                    })
+                    Type::from_str(talk_type).map_err(ParsingError::from)
                 })?;
 
             let title = settings.get("title").map_or("(no title)", |&e| e);
