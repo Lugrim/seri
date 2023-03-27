@@ -90,6 +90,13 @@ pub enum ParsingError {
     /// The input did not have empty-newline separated header and description.
     #[error("could not split the header and description of the event")]
     CouldNotSplit,
+
+    /// The type of talk provided by the user is not valid.
+    #[error("`{talk_type}` is not a valid talk type")]
+    InvalidTalkType {
+        /// talk type provided by the user
+        talk_type: String,
+    },
 }
 
 impl FromStr for Event {
@@ -99,11 +106,16 @@ impl FromStr for Event {
         let trimmed = s.trim();
         if let Some((header, description)) = trimmed.split_once("\n\n") {
             let settings = split_pairs(header);
+
             let event_type = settings
                 .get("type")
                 .as_ref()
-                // TODO: check if Type needs a refactor too.
-                .map_or(Type::Talk, |e| Type::from_str(e).unwrap_or_default());
+                .map_or(Ok(Type::Talk), |talk_type| {
+                    Type::from_str(talk_type).map_err(|_| ParsingError::InvalidTalkType {
+                        talk_type: (**talk_type).to_string(),
+                    })
+                })?;
+
             let title = settings.get("title").map_or("(no title)", |&e| e);
             let start_date = Local
                 .datetime_from_str(
