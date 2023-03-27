@@ -112,6 +112,10 @@ pub enum ParsingError {
     /// a line of configuration given as input is not a valid "key:value" pair.
     #[error(transparent)]
     InvalidField(#[from] InvalidField),
+
+    /// the given date does not respect the expected format.
+    #[error("the give date `{0}` does not respect the expected format: `%Y-%m-%d %H:%M`")]
+    InvalidDateShape(String),
 }
 
 impl FromStr for Event {
@@ -130,12 +134,16 @@ impl FromStr for Event {
                 })?;
 
             let title = settings.get("title").map_or("(no title)", |&e| e);
-            let start_date = Local
-                .datetime_from_str(
-                    settings.get("date").expect("No `date` field found"),
-                    "%Y-%m-%d %H:%M",
-                )
-                .expect("Invalid date shape.");
+
+            let date_name = String::from("date");
+            let start_date = settings
+                .get(date_name.as_str())
+                .ok_or(ParsingError::SettingNotFound { name: date_name })
+                .and_then(|datetime| {
+                    Local
+                        .datetime_from_str(datetime, "%Y-%m-%d %H:%M")
+                        .map_err(|_| ParsingError::InvalidDateShape((*datetime).to_string()))
+                })?;
 
             let duration_name = String::from("duration");
             let duration = settings
