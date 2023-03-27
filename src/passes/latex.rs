@@ -19,6 +19,20 @@ pub struct BoundingBox {
     down_right: DateTime<Local>,
 }
 
+impl BoundingBox {
+    /// Get a datetime of the first day at 00:00 of the bounding box.
+    #[must_use]
+    pub fn first_day(&self) -> Option<DateTime<Local>> {
+        self.up_left.with_hour(0)?.with_minute(0)
+    }
+
+    /// Get a datetime of the last day at 00:00 of the bounding box.
+    #[must_use]
+    pub fn last_day(&self) -> Option<DateTime<Local>> {
+        self.down_right.with_hour(0)?.with_minute(0)
+    }
+}
+
 /// TODO Do not assume everything is in the same month
 /// Will find the bounding box (date, times) to generate a timetable
 fn find_bounding_box(events: &Vec<Event>) -> Option<BoundingBox> {
@@ -77,12 +91,9 @@ impl CompilingPass<Vec<Event>, String, TikzBackendCompilationError> for TikzFron
         let first_hour = bb.up_left.hour();
         let last_hour = bb.down_right.hour() + 1;
 
-        let day_count = (bb.down_right.with_hour(0).unwrap().with_minute(0).unwrap()
-            - bb.up_left.with_hour(0).unwrap().with_minute(0).unwrap())
-        .num_days()
-            + 1;
-
+        let day_count = (bb.last_day().unwrap() - bb.first_day().unwrap()).num_days() + 1;
         let day_end = day_count + 1;
+
         let mut r: String = r"\documentclass{standalone}
 \usepackage{tikz}
 
