@@ -1,9 +1,10 @@
 //! Specification of a timetable event
 
-use std::collections::HashMap;
-use std::str::FromStr;
-use std::fmt;
 use chrono::prelude::*;
+use std::collections::HashMap;
+use std::fmt;
+use std::str::FromStr;
+use thiserror::Error;
 
 /// The type of a timetable event
 #[derive(Debug, PartialEq, Eq, Default)]
@@ -19,8 +20,13 @@ pub enum Type {
     Fun,
 }
 
+/// The type of talk provided is not valid.
+#[derive(Debug, Error)]
+#[error("`{0} is not a valid type of talk`")]
+pub struct InvalidTalkType(pub String);
+
 impl FromStr for Type {
-    type Err = ();
+    type Err = InvalidTalkType;
 
     fn from_str(input: &str) -> Result<Self, Self::Err> {
         match input.to_lowercase().as_str() {
@@ -28,7 +34,7 @@ impl FromStr for Type {
             "meal" => Ok(Self::Meal),
             "break" => Ok(Self::Break),
             "fun" => Ok(Self::Fun),
-            _ => Err(()),
+            tt => Err(InvalidTalkType(tt.to_owned())),
         }
     }
 }
@@ -59,33 +65,97 @@ pub struct Event {
     pub description: String,
 }
 
+/// The line of configuration given by the user is not a valid "key:value" pair.
+#[derive(Debug, Error)]
+#[error("line `{0}` is not a valid field")]
+pub struct InvalidField(pub String);
+
 /// Split header (cf grammar)
-fn split_pairs(string: &str) -> HashMap<&str, &str> {
+fn split_pairs(string: &str) -> Result<HashMap<&str, &str>, InvalidField> {
     string
         .split('\n')
-        .map(|s| s.split_at(s.find(':').unwrap()))
-        .map(|(key, val)| (key, val[1..].trim()))
+        .map(|s| {
+            s.find(':')
+                .ok_or_else(|| InvalidField(s.to_owned()))
+                .map(|pos| s.split_at(pos))
+        })
+        .map(|field| field.map(|(key, val)| (key, val[1..].trim())))
         .collect()
 }
 
+/// The parsing of an event failed.
+#[derive(Debug, Error)]
+pub enum ParsingError {
+    /// The duration setting could not be parsed as an integer.
+    #[error("could not parse duration: `{source}`")]
+    CouldNotParseDuration {
+        /// the underlying error
+        #[source]
+        source: <u32 as FromStr>::Err,
+    },
+
+    /// No setting named `name` was found in the input.
+    #[error("setting named `{name}` not found")]
+    SettingNotFound {
+        /// the setting name
+        name: String,
+    },
+
+    /// The input did not have empty-newline separated header and description.
+    #[error("could not split the header and description of the event")]
+    CouldNotSplit,
+
+    /// The type of talk provided by the user is not valid.
+    #[error(transparent)]
+    InvalidTalkType(#[from] InvalidTalkType),
+
+    /// a line of configuration given as input is not a valid "key:value" pair.
+    #[error(transparent)]
+    InvalidField(#[from] InvalidField),
+
+    /// the given date does not respect the expected format.
+    #[error("the give date `{0}` does not respect the expected format: `%Y-%m-%d %H:%M`")]
+    InvalidDateShape(String),
+}
+
 impl FromStr for Event {
-    type Err = ();
+    type Err = ParsingError;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let trimmed = s.trim();
         if let Some((header, description)) = trimmed.split_once("\n\n") {
-            let settings = split_pairs(header);
-            let event_type = settings.get("type")
+            let settings = split_pairs(header)?;
+
+            let event_type = settings
+                .get("type")
                 .as_ref()
-                .map_or(Type::Talk, |e| Type::from_str(e).unwrap_or_default());
+                .map_or(Ok(Type::Talk), |talk_type| {
+                    Type::from_str(talk_type).map_err(ParsingError::from)
+                })?;
+
             let title = settings.get("title").map_or("(no title)", |&e| e);
-            let start_date = Local
-                .datetime_from_str(settings.get("date").expect("No `date` field found"),
-                    "%Y-%m-%d %H:%M")
-                .expect("Invalid date shape.");
-            let duration = settings.get("duration")
-                .map(|e| e.parse().expect("Could not parse duration."))
-                .expect("Could not get duration.");
+
+            let date_name = String::from("date");
+            let start_date = settings
+                .get(date_name.as_str())
+                .ok_or(ParsingError::SettingNotFound { name: date_name })
+                .and_then(|datetime| {
+                    Local
+                        .datetime_from_str(datetime, "%Y-%m-%d %H:%M")
+                        .map_err(|_| ParsingError::InvalidDateShape((*datetime).to_string()))
+                })?;
+
+            let duration_name = String::from("duration");
+            let duration = settings
+                .get(duration_name.as_str())
+                .ok_or(ParsingError::SettingNotFound {
+                    name: duration_name,
+                })
+                .and_then(|duration_setting| {
+                    duration_setting
+                        .parse()
+                        .map_err(|err| ParsingError::CouldNotParseDuration { source: err })
+                })?;
 
             Ok(Self {
                 event_type,
@@ -95,7 +165,7 @@ impl FromStr for Event {
                 description: description.to_owned(),
             })
         } else {
-            Err(())
+            Err(ParsingError::CouldNotSplit)
         }
     }
 }

@@ -19,16 +19,10 @@
 #![warn(missing_docs)]
 #![warn(rustdoc::missing_crate_level_docs)]
 
-
-use crate::passes::{
-    parser::ParseTimetable,
-    latex::TikzFrontend,
-    CompilingPass};
-use std::{
-    fs,
-    io::Read,
-};
+use crate::passes::{latex::TikzFrontend, parser::ParseTimetable, CompilingPass};
 use clap::Parser;
+use passes::latex::TikzBackendCompilationError;
+use std::{fs, io::Read};
 
 pub mod event;
 pub mod passes;
@@ -42,15 +36,25 @@ struct Args {
     file: Option<String>,
 }
 
+fn generate_tikz(content: &str) -> Result<String, TikzBackendCompilationError> {
+    let parsed = ParseTimetable::apply(content)?;
+    TikzFrontend::apply(parsed)
+}
+
 fn main() {
     let args = Args::parse();
 
-    let content = args.file.map_or_else(||
-            {
-                let mut buffer = Vec::new();
-                std::io::stdin().read_to_end(&mut buffer).unwrap();
-                String::from_utf8(buffer).unwrap()
-            }, |filepath| fs::read_to_string(filepath).expect("Could not read file"));
+    let content = args.file.map_or_else(
+        || {
+            let mut buffer = Vec::new();
+            std::io::stdin().read_to_end(&mut buffer).unwrap();
+            String::from_utf8(buffer).unwrap()
+        },
+        |filepath| fs::read_to_string(filepath).expect("Could not read file"),
+    );
 
-    println!("{:}", TikzFrontend::apply(ParseTimetable::apply(&content).unwrap()).unwrap());
+    match generate_tikz(&content) {
+        Ok(tikz) => println!("{tikz}"),
+        Err(err) => eprintln!("{err}"),
+    }
 }
