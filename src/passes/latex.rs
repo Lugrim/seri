@@ -1,22 +1,22 @@
 //! Latex frontends
 
-use std::ops::Add;
+use std::{ops::Add, str::FromStr};
 
-use chrono::{Timelike, Local, Datelike, DateTime, Duration};
+use chrono::{DateTime, Datelike, Duration, Local, Timelike};
 
-use crate::{
-    passes::CompilingPass,
-    event::Event
-};
+use crate::{event::Event, passes::CompilingPass};
 
 /// Frontend outputing events to a standalone LaTeX document containing a Tikz timetable
-pub struct TikzFrontend {
-}
+pub struct TikzFrontend {}
 
 /// TODO Do not assume everything is in the same month
 /// Will find the bounding box (date, times) to generate a timetable
 fn find_bounding_box(events: &Vec<Event>) -> (DateTime<Local>, DateTime<Local>) {
-    assert!(!events.is_empty(), "{}", "Can't generate Tikz diagram from empty event list");
+    assert!(
+        !events.is_empty(),
+        "{}",
+        "Can't generate Tikz diagram from empty event list"
+    );
     let mut up_left = events.get(0).unwrap().start_date;
     let mut down_right = events.get(0).unwrap().start_date;
     for e in events {
@@ -37,40 +37,36 @@ fn find_bounding_box(events: &Vec<Event>) -> (DateTime<Local>, DateTime<Local>) 
         }
         if e.start_date.date_naive() > down_right.date_naive() {
             down_right = down_right
-                .with_day(e.start_date.day()).unwrap()
-                .with_month(e.start_date.month()).unwrap()
-                .with_year(e.start_date.year()).unwrap();
+                .with_day(e.start_date.day())
+                .unwrap()
+                .with_month(e.start_date.month())
+                .unwrap()
+                .with_year(e.start_date.year())
+                .unwrap();
         }
     }
 
     (up_left, down_right)
 }
 
-impl CompilingPass<Vec<Event>, String, ()> for TikzFrontend {
-    fn apply(events: Vec<Event>) -> Result<String, ()> {
-    const POSTAMBLE: &str = r"
+impl CompilingPass<Vec<Event>, String, <Event as FromStr>::Err> for TikzFrontend {
+    fn apply(events: Vec<Event>) -> Result<String, <Event as FromStr>::Err> {
+        const POSTAMBLE: &str = r"
 \end{tikzpicture}
 \end{document}";
-	
-    let (up_left, down_right) = find_bounding_box(&events);
 
-    let first_hour = up_left.hour();
-    let last_hour = down_right.hour() + 1;
+        let (up_left, down_right) = find_bounding_box(&events);
 
-    let day_count = (down_right
-        .with_hour(0)
-        .unwrap()
-        .with_minute(0)
-        .unwrap()
-        -
-        up_left
-        .with_hour(0)
-        .unwrap()
-        .with_minute(0)
-        .unwrap()).num_days() + 1;
+        let first_hour = up_left.hour();
+        let last_hour = down_right.hour() + 1;
 
-    let day_end = day_count + 1;
-    let mut r: String = r"\documentclass{standalone}
+        let day_count = (down_right.with_hour(0).unwrap().with_minute(0).unwrap()
+            - up_left.with_hour(0).unwrap().with_minute(0).unwrap())
+        .num_days()
+            + 1;
+
+        let day_end = day_count + 1;
+        let mut r: String = r"\documentclass{standalone}
 \usepackage{tikz}
 
 \begin{document}
@@ -126,71 +122,74 @@ impl CompilingPass<Vec<Event>, String, ()> for TikzFrontend {
 % coordinate to correspond to hours (y should point downwards).
 \begin{tikzpicture}[y=-\hourheight,x=\daywidth]
 
-    % First print a list of times.".to_owned();
+    % First print a list of times."
+            .to_owned();
 
-    let foreach = r"
-    \foreach \time   [evaluate=\time] in ".to_owned()
-        + &format!("{{{first_hour},...,{last_hour}}}");
+        let foreach = r"
+    \foreach \time   [evaluate=\time] in "
+            .to_owned()
+            + &format!("{{{first_hour},...,{last_hour}}}");
 
-    r += &foreach;
-    r += r"
+        r += &foreach;
+        r += r"
             \node[anchor=east] at (1,\time) {\time:00};";
-    
-    r += r"
+
+        r += r"
     % Draw some day dividers.
     \foreach \day   [evaluate=\day] in ";
-    r += &format!("{{1,...,{day_end}}}");
+        r += &format!("{{1,...,{day_end}}}");
 
-    r +=r"
-        \draw (\day,";
-    r += &format!("{}", first_hour - 1);
-    r += r") -- (\day,";
-    r += &format!("{}", last_hour);
-    r += ");";
-
-    r += r"
-	% Draw some hours dividers.";
-    r += &foreach;
-    r +=r"
-        \draw (1,\time) -- (";
-    r += &format!("{}", day_end);
-    r += r", \time);";
-
-    for i in 0..day_count {
-        let col = i + 1;
-	    r += r"
-        \node[anchor=south] at (";
-        r += &format!("{col}");
-        r += r".5, 8.5) {";
-        r += &format!("{}", (up_left + Duration::days(i)).format("%A, %B %e"));
-        r += r"};";
-    }
-
-    for e in events {
         r += r"
-    \node[";
-        r += &format!("{}", e.event_type);
-        r += "={";
-        r += &format!("{:.2}",f64::from(e.duration) / 60.);
-        r += "}{";
-        r += "1"; // TODO Compute simultaneous events
-        r += "}] at (";
-        r += &format!("{}",
-                      e.start_date.day() - up_left.day() + 1);
-        r += ",";
-        r += &format!("{}.{:.2}",
-                      e.start_date.format("%H"),
-                      e.start_date.minute() * 5 / 3);
-        r += ") {";
-        let (short_title, title_overflow) = e.title.split_at(std::cmp::min(25, e.title.len()));
-        r += short_title;
-        if !title_overflow.is_empty() {
-            r += "...";
-        }
-        r += "};";
-    }
+        \draw (\day,";
+        r += &format!("{}", first_hour - 1);
+        r += r") -- (\day,";
+        r += &format!("{}", last_hour);
+        r += ");";
 
-    r += POSTAMBLE;
-    Ok(r)
-   }
+        r += r"
+	% Draw some hours dividers.";
+        r += &foreach;
+        r += r"
+        \draw (1,\time) -- (";
+        r += &format!("{}", day_end);
+        r += r", \time);";
+
+        for i in 0..day_count {
+            let col = i + 1;
+            r += r"
+        \node[anchor=south] at (";
+            r += &format!("{col}");
+            r += r".5, 8.5) {";
+            r += &format!("{}", (up_left + Duration::days(i)).format("%A, %B %e"));
+            r += r"};";
+        }
+
+        for e in events {
+            r += r"
+    \node[";
+            r += &format!("{}", e.event_type);
+            r += "={";
+            r += &format!("{:.2}", f64::from(e.duration) / 60.);
+            r += "}{";
+            r += "1"; // TODO Compute simultaneous events
+            r += "}] at (";
+            r += &format!("{}", e.start_date.day() - up_left.day() + 1);
+            r += ",";
+            r += &format!(
+                "{}.{:.2}",
+                e.start_date.format("%H"),
+                e.start_date.minute() * 5 / 3
+            );
+            r += ") {";
+            let (short_title, title_overflow) = e.title.split_at(std::cmp::min(25, e.title.len()));
+            r += short_title;
+            if !title_overflow.is_empty() {
+                r += "...";
+            }
+            r += "};";
+        }
+
+        r += POSTAMBLE;
+        Ok(r)
+    }
 }
