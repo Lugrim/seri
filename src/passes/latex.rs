@@ -21,53 +21,69 @@ pub struct BoundingBox {
     down_right: DateTime<Local>,
 }
 
+/// The datetime is not valid.
+#[derive(Debug, Error)]
+#[error("the datetime created is invalid")]
+pub struct InvalidDatetime;
+
 impl BoundingBox {
     /// Get a datetime of the first day at 00:00 of the bounding box.
-    #[must_use]
-    pub fn first_day(&self) -> Option<DateTime<Local>> {
-        self.up_left.with_hour(0)?.with_minute(0)
+    ///
+    /// # Errors
+    ///
+    /// Returns an [`InvalidDatetime`] if it is not possible to build the datetime.
+    pub fn first_day(&self) -> Result<DateTime<Local>, InvalidDatetime> {
+        self.up_left
+            .with_hour(0)
+            .and_then(|dt| dt.with_minute(0))
+            .ok_or(InvalidDatetime)
     }
 
-    /// Get a datetime of the last day at 00:00 of the bounding box.
-    #[must_use]
-    pub fn last_day(&self) -> Option<DateTime<Local>> {
-        self.down_right.with_hour(0)?.with_minute(0)
+    /// Get a datetime of the last day at 00:00 of the bounding box
+    ///
+    /// # Errors
+    ///
+    /// Returns an [`InvalidDatetime`] if it is not possible to build the datetime.
+    pub fn last_day(&self) -> Result<DateTime<Local>, InvalidDatetime> {
+        self.down_right
+            .with_hour(0)
+            .and_then(|dt| dt.with_minute(0))
+            .ok_or(InvalidDatetime)
     }
 }
 
 /// TODO Do not assume everything is in the same month
 /// Will find the bounding box (date, times) to generate a timetable
 fn find_bounding_box(events: &Vec<Event>) -> Option<BoundingBox> {
-    events.get(0).and_then(|first| {
-        let mut up_left = first.start_date;
-        let mut down_right = first.start_date;
-        for e in events {
-            if e.start_date.time() < up_left.time() {
-                up_left = up_left.with_hour(e.start_date.hour())?;
-                up_left = up_left.with_minute(e.start_date.minute())?;
-            }
-            if e.start_date.date_naive() < up_left.date_naive() {
-                up_left = up_left.with_day(e.start_date.day())?;
-            }
-            if (e.start_date + Duration::minutes(i64::from(e.duration))).time() > down_right.time()
-            {
-                down_right = down_right
-                    .with_hour(e.start_date.hour())?
-                    .with_minute(e.start_date.minute())
-                    .map(|h| h.add(Duration::minutes(i64::from(e.duration))))?;
-            }
-            if e.start_date.date_naive() > down_right.date_naive() {
-                down_right = down_right
-                    .with_day(e.start_date.day())?
-                    .with_month(e.start_date.month())?
-                    .with_year(e.start_date.year())?;
-            }
-        }
+    let first = events.get(0)?;
+    let mut up_left = first.start_date;
+    let mut down_right = first.start_date;
 
-        Some(BoundingBox {
-            up_left,
-            down_right,
-        })
+    for e in events {
+        if e.start_date.time() < up_left.time() {
+            up_left = up_left.with_hour(e.start_date.hour())?;
+            up_left = up_left.with_minute(e.start_date.minute())?;
+        }
+        if e.start_date.date_naive() < up_left.date_naive() {
+            up_left = up_left.with_day(e.start_date.day())?;
+        }
+        if (e.start_date + Duration::minutes(i64::from(e.duration))).time() > down_right.time() {
+            down_right = down_right
+                .with_hour(e.start_date.hour())?
+                .with_minute(e.start_date.minute())
+                .map(|h| h.add(Duration::minutes(i64::from(e.duration))))?;
+        }
+        if e.start_date.date_naive() > down_right.date_naive() {
+            down_right = down_right
+                .with_day(e.start_date.day())?
+                .with_month(e.start_date.month())?
+                .with_year(e.start_date.year())?;
+        }
+    }
+
+    Some(BoundingBox {
+        up_left,
+        down_right,
     })
 }
 
@@ -80,6 +96,9 @@ pub enum TikzBackendCompilationError {
     #[error("no event was provided")]
     /// The list of events was empty.
     NoEventProvided,
+    #[error(transparent)]
+    /// The datetime of either the first day or last day of the bounding box is not valid.
+    InvalidDatetime(#[from] InvalidDatetime),
 }
 
 const LATEX_INTRO: &str = r"\documentclass{standalone}
@@ -151,7 +170,7 @@ impl CompilingPass<Vec<Event>, String, TikzBackendCompilationError> for TikzFron
         let first_hour = bb.up_left.hour();
         let last_hour = bb.down_right.hour() + 1;
 
-        let day_count = (bb.last_day().unwrap() - bb.first_day().unwrap()).num_days() + 1;
+        let day_count = (bb.last_day()? - bb.first_day()?).num_days() + 1;
         let day_end = day_count + 1;
 
         let mut r: String = LATEX_INTRO.to_owned();
