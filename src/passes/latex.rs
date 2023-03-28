@@ -157,8 +157,11 @@ const LATEX_INTRO: &str = r"\documentclass{standalone}
 
     % First print a list of times.";
 
-impl CompilingPass<Vec<Event>, String, TikzBackendCompilationError> for TikzFrontend {
-    fn apply(events: Vec<Event>) -> Result<String, TikzBackendCompilationError> {
+impl CompilingPass<Vec<Event>> for TikzFrontend {
+    type Residual = String;
+    type Error = TikzBackendCompilationError;
+
+    fn apply(events: Vec<Event>) -> Result<Self::Residual, Self::Error> {
         const POSTAMBLE: &str = r"
 \end{tikzpicture}
 \end{document}";
@@ -241,4 +244,3 @@ impl CompilingPass<Vec<Event>, String, TikzBackendCompilationError> for TikzFron
         Ok(r)
     }
 }
-

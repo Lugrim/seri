@@ -29,8 +29,11 @@ use std::str::FromStr;
 /// ```
 pub struct ParseTimetable {}
 
-impl CompilingPass<&str, Vec<Event>, <Event as FromStr>::Err> for ParseTimetable {
-    fn apply(s: &str) -> Result<Vec<Event>, <Event as FromStr>::Err> {
+impl CompilingPass<&str> for ParseTimetable {
+    type Residual = Vec<Event>;
+    type Error = <Event as FromStr>::Err;
+
+    fn apply(s: &str) -> Result<Self::Residual, Self::Error> {
         s.split("---").map(Event::from_str).collect()
     }
 }

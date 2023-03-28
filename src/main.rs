@@ -19,9 +19,16 @@
 #![warn(missing_docs)]
 #![warn(rustdoc::missing_crate_level_docs)]
 
-use crate::{passes::{latex::{TikzBackendCompilationError, TikzFrontend}, parser::ParseTimetable, PassInput}, event::Event};
+use crate::{
+    event::Event,
+    passes::{
+        latex::{TikzBackendCompilationError, TikzFrontend},
+        parser::ParseTimetable,
+        PassInput,
+    },
+};
 use clap::Parser;
-use std::{fs, io::Read, str::FromStr};
+use std::{fs, io::Read};
 
 pub mod event;
 pub mod passes;
@@ -40,8 +47,8 @@ impl PassInput for Vec<Event> {}
 
 fn generate_tikz(content: &str) -> Result<String, TikzBackendCompilationError> {
     content
-        .chain_pass::<ParseTimetable, Vec<Event>, <Event as FromStr>::Err>()?
-        .chain_pass::<TikzFrontend, String, TikzBackendCompilationError>()
+        .chain_pass::<ParseTimetable>()?
+        .chain_pass::<TikzFrontend>()
 }
 
 fn main() {
@@ -55,7 +62,7 @@ fn main() {
         },
         |filepath| fs::read_to_string(filepath).expect("Could not read file"),
     );
-    
+
     match generate_tikz(&content) {
         Ok(tikz) => println!("{tikz}"),
         Err(err) => eprintln!("{err}"),
