@@ -68,7 +68,10 @@ impl BoundingBox {
         }
 
         if second.date_naive() < first.date_naive() {
-            res = res.with_day(second.day())?;
+            res = res
+                .with_day(second.day())?
+                .with_month(second.month())?
+                .with_year(second.year())?;
         }
 
         Some(res)
