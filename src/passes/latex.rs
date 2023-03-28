@@ -7,8 +7,6 @@ use thiserror::Error;
 
 use crate::{event::Event, passes::CompilingPass};
 
-use super::PassInput;
-
 /// Frontend outputing events to a standalone LaTeX document containing a Tikz timetable
 pub struct TikzFrontend {}
 
