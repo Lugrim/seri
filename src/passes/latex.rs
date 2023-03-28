@@ -1,6 +1,6 @@
 //! Latex frontends
 
-use std::{ops::Add, str::FromStr};
+use std::str::FromStr;
 
 use chrono::{DateTime, Datelike, Duration, Local, Timelike};
 use thiserror::Error;
@@ -48,6 +48,59 @@ impl BoundingBox {
             .and_then(|dt| dt.with_minute(0))
             .ok_or(InvalidDatetime)
     }
+
+    /// Create a datetime that represent the day of the earlier of both datetimes and at the time of
+    /// day of the earlier of them.
+    ///
+    /// # Example
+    ///
+    /// If first is the November, 06 at 9:00 and the second is November, 08 at 8:00, the result is
+    /// the November, 06 at 8:00.
+    #[must_use]
+    pub fn most_top_left(
+        first: &DateTime<Local>,
+        second: &DateTime<Local>,
+    ) -> Option<DateTime<Local>> {
+        let mut res = *first;
+
+        if second.time() < first.time() {
+            res = res.with_hour(second.hour())?.with_minute(second.minute())?;
+        }
+
+        if second.date_naive() < first.date_naive() {
+            res = res.with_day(second.day())?;
+        }
+
+        Some(res)
+    }
+
+    /// Create a datetime that represent the day of the later of both datetimes and at the time of
+    /// day of the later of them.
+    ///
+    /// # Example
+    ///
+    /// If first is the November, 06 at 9:00 and the second is November, 08 at 8:00, the result is
+    /// the November, 08 at 9:00.
+    #[must_use]
+    pub fn most_bottom_right(
+        first: &DateTime<Local>,
+        second: &DateTime<Local>,
+    ) -> Option<DateTime<Local>> {
+        let mut res = *first;
+
+        if first.time() < second.time() {
+            res = res.with_hour(second.hour())?.with_minute(second.minute())?;
+        }
+
+        if first.date_naive() < second.date_naive() {
+            res = res
+                .with_day(second.day())?
+                .with_month(second.month())?
+                .with_year(second.year())?;
+        }
+
+        Some(res)
+    }
 }
 
 /// TODO Do not assume everything is in the same month
@@ -58,25 +111,10 @@ fn find_bounding_box(events: &Vec<Event>) -> Option<BoundingBox> {
     let mut down_right = first.start_date;
 
     for e in events {
-        if e.start_date.time() < up_left.time() {
-            up_left = up_left.with_hour(e.start_date.hour())?;
-            up_left = up_left.with_minute(e.start_date.minute())?;
-        }
-        if e.start_date.date_naive() < up_left.date_naive() {
-            up_left = up_left.with_day(e.start_date.day())?;
-        }
-        if (e.start_date + Duration::minutes(i64::from(e.duration))).time() > down_right.time() {
-            down_right = down_right
-                .with_hour(e.start_date.hour())?
-                .with_minute(e.start_date.minute())
-                .map(|h| h.add(Duration::minutes(i64::from(e.duration))))?;
-        }
-        if e.start_date.date_naive() > down_right.date_naive() {
-            down_right = down_right
-                .with_day(e.start_date.day())?
-                .with_month(e.start_date.month())?
-                .with_year(e.start_date.year())?;
-        }
+        let end_of_event = e.start_date + Duration::minutes(i64::from(e.duration));
+
+        up_left = BoundingBox::most_top_left(&up_left, &e.start_date)?;
+        down_right = BoundingBox::most_bottom_right(&down_right, &end_of_event)?;
     }
 
     Some(BoundingBox {
