@@ -14,4 +14,4 @@ keywords = ["timetable"]
 [dependencies]
 clap = { version = "4.1.13", features = ["derive"] }
 chrono = "0.4.24"
-
+thiserror = "1.0.*"

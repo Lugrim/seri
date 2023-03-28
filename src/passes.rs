@@ -1,7 +1,7 @@
 //! Compilation passes
 
-pub mod parser;
 pub mod latex;
+pub mod parser;
 
 /// A trait defining compilation passes
 /// Compilation passes should be chainable

@@ -1,9 +1,6 @@
 //! Parsing compilation passes
 
-use crate::{
-    passes::CompilingPass,
-    event::Event
-};
+use crate::{event::Event, passes::CompilingPass};
 
 use std::str::FromStr;
 
@@ -30,14 +27,10 @@ use std::str::FromStr;
 ///
 /// timetable = event , ( delimiter , event ) * ;
 /// ```
-pub struct ParseTimetable {
-}
+pub struct ParseTimetable {}
 
-impl CompilingPass<&str, Vec<Event>, ()> for ParseTimetable {
-    fn apply(s: &str) -> Result<Vec<Event>, ()> {
-    Ok(s
-        .split("---")
-        .filter_map(|e| Event::from_str(e).ok())
-        .collect())
+impl CompilingPass<&str, Vec<Event>, <Event as FromStr>::Err> for ParseTimetable {
+    fn apply(s: &str) -> Result<Vec<Event>, <Event as FromStr>::Err> {
+        s.split("---").map(Event::from_str).collect()
     }
 }
