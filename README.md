@@ -2,14 +2,14 @@
 
 - [ ] Refactor as a compiler structure
 	- [x] Refactor base code
-	- [ ] Add passes chaining
-		- [x] Trait bound pass chaining
-		- [ ] Find a less redundant way to define chaining?
+	- [x] Add passes chaining
+		- [x] Trait bound pass chaining (#3)
+		- [x] Find a cleaner way to define chaining (#5)
 	- [ ] Stop being stupid and put frontend / backend in the right order
 - [ ] Actually load data
 	- [x] From stdin
 	- [x] From file (CLAP)
-	- [ ] I/O Error management
+	- [x] I/O Error management (#1)
 - [ ] Enhance frontend
 	- [ ] Parse more headers
 		- [ ] speakers
