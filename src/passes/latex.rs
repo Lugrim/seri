@@ -7,8 +7,8 @@ use thiserror::Error;
 
 use crate::{event::Event, passes::CompilingPass};
 
-/// Frontend outputing events to a standalone LaTeX document containing a Tikz timetable
-pub struct TikzFrontend {}
+/// Backend outputing events to a standalone LaTeX document containing a Tikz timetable
+pub struct TikzBackend {}
 
 /// Bounding box of event.
 ///
@@ -198,7 +198,7 @@ const LATEX_INTRO: &str = r"\documentclass{standalone}
 
     % First print a list of times.";
 
-impl CompilingPass<Vec<Event>> for TikzFrontend {
+impl CompilingPass<Vec<Event>> for TikzBackend {
     type Residual = String;
     type Error = TikzBackendCompilationError;
 

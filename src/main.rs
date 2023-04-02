@@ -22,7 +22,7 @@
 use crate::{
     event::Event,
     passes::{
-        latex::{TikzBackendCompilationError, TikzFrontend},
+        latex::{TikzBackend, TikzBackendCompilationError},
         parser::ParseTimetable,
         PassInput,
     },
@@ -48,7 +48,7 @@ impl PassInput for Vec<Event> {}
 fn generate_tikz(content: &str) -> Result<String, TikzBackendCompilationError> {
     content
         .chain_pass::<ParseTimetable>()?
-        .chain_pass::<TikzFrontend>()
+        .chain_pass::<TikzBackend>()
 }
 
 fn main() {
