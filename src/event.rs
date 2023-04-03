@@ -18,6 +18,8 @@ pub enum Type {
     Break,
     /// Fun time!
     Fun,
+    /// Transportation (car, bus...)
+    Transport,
 }
 
 /// The type of talk provided is not valid.
@@ -34,6 +36,7 @@ impl FromStr for Type {
             "meal" => Ok(Self::Meal),
             "break" => Ok(Self::Break),
             "fun" => Ok(Self::Fun),
+            "transport" => Ok(Self::Transport),
             tt => Err(InvalidTalkType(tt.to_owned())),
         }
     }
@@ -46,6 +49,7 @@ impl fmt::Display for Type {
             Self::Meal => write!(f, "meal"),
             Self::Break => write!(f, "break"),
             Self::Fun => write!(f, "fun"),
+            Self::Transport => write!(f, "transport"),
         }
     }
 }
