@@ -1,12 +1,12 @@
 # TODO
 
-- [ ] Refactor as a compiler structure
+- [x] Refactor as a compiler structure
 	- [x] Refactor base code
 	- [x] Add passes chaining
 		- [x] Trait bound pass chaining (#3)
 		- [x] Find a cleaner way to define chaining (#5)
-	- [ ] Stop being stupid and put frontend / backend in the right order
-- [ ] Actually load data
+	- [x] Stop being stupid and put frontend / backend in the right order
+- [x] Actually load data
 	- [x] From stdin
 	- [x] From file (CLAP)
 	- [x] I/O Error management (#1)
