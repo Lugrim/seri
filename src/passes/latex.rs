@@ -251,7 +251,9 @@ impl CompilingPass<Vec<Event>> for TikzBackend {
             r += r"
         \node[anchor=south] at (";
             r += &format!("{col}");
-            r += r".5, 8.5) {";
+            r += r".5, ";
+            r += &format!("{}", first_hour - 1);
+            r += ".5) {";
             r += &format!("{}", (bb.up_left + Duration::days(i)).format("%A, %B %e"));
             r += r"};";
         }
