@@ -128,14 +128,10 @@ impl FromStr for Event {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let trimmed = s.trim();
         let split_result = trimmed.split_once("\n\n");
-        
+
         let (header, description) = if let Some((first, second)) = split_result {
             let text = second.trim();
-            if text.is_empty() {
-                (first.trim(), None)
-            } else {
-                (first.trim(), Some(text.to_owned()))
-            }
+            (first.trim(), (!text.is_empty()).then(|| text.to_owned()))
         } else {
             (trimmed, None)
         };
@@ -173,12 +169,12 @@ impl FromStr for Event {
                     .map_err(|err| ParsingError::CouldNotParseDuration { source: err })
             })?;
 
-            Ok(Self {
-                event_type,
-                start_date,
-                duration,
-                title: title.to_owned(),
-                description,
-            })
+        Ok(Self {
+            event_type,
+            start_date,
+            duration,
+            title: title.to_owned(),
+            description,
+        })
     }
 }
