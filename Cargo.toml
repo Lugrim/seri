@@ -2,7 +2,10 @@
 name = "seri"
 version = "0.1.2"
 edition = "2021"
-authors = ["Lugrim"]
+authors = [
+	"Lugrim",
+	"Camille Le Bon",
+]
 license = "ACSL"
 repository = "https://github.com/Lugrim/timetable-language"
 description = "A Domain Specific Language Compiler for organising events and exporting details to different formats"
