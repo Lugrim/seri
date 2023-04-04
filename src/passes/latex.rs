@@ -210,7 +210,8 @@ fn speaker_string(e: &Event) -> String {
     }
 }
 
-impl CompilingPass<Vec<Event>> for TikzBackend {
+impl CompilingPass for TikzBackend {
+    type Input<'a> = Vec<Event>;
     type Residual = String;
     type Error = TikzBackendCompilationError;
 

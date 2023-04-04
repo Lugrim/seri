@@ -29,7 +29,8 @@ use std::str::FromStr;
 /// ```
 pub struct ParseTimetable {}
 
-impl CompilingPass<&str> for ParseTimetable {
+impl CompilingPass for ParseTimetable {
+    type Input<'a> = &'a str;
     type Residual = Vec<Event>;
     type Error = <Event as FromStr>::Err;
 

@@ -5,7 +5,9 @@ pub mod parser;
 
 /// A trait defining compilation passes
 /// Compilation passes should be chainable
-pub trait CompilingPass<T> {
+pub trait CompilingPass {
+    /// Type of input data
+    type Input<'a>;
     /// Type of data that is returned by the pass if it succeeds.
     type Residual;
     /// Type of errors that the pass returns when it fails.
@@ -16,7 +18,7 @@ pub trait CompilingPass<T> {
     /// # Errors
     ///
     /// May return errors if type is not compatible
-    fn apply(_: T) -> Result<Self::Residual, Self::Error>;
+    fn apply<'a>(_: Self::Input<'a>) -> Result<Self::Residual, Self::Error>;
 }
 
 /// A trait to be able to chain compilation passes
@@ -26,9 +28,9 @@ pub trait PassInput: Sized {
     /// # Errors
     ///
     /// Can return a fitting error if a compilation pass cannot be applied.
-    fn chain_pass<P>(self) -> Result<P::Residual, P::Error>
+    fn chain_pass<'a, P>(self) -> Result<P::Residual, P::Error>
     where
-        P: CompilingPass<Self>,
+        P: CompilingPass<Input<'a> = Self>,
     {
         P::apply(self)
     }
