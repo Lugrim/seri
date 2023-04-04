@@ -198,10 +198,23 @@ const LATEX_INTRO: &str = r"\documentclass{standalone}
 
     % First print a list of times.";
 
+fn speaker_string(e: &Event) -> String {
+    match e.speakers.len() {
+        0 => {
+            let (short, overflow) = e.title.split_at(std::cmp::min(25, e.title.len()));
+            let rest = if overflow.is_empty() { "" } else { "..." };
+            short.to_owned() + rest
+        }
+        1 => e.speakers[0].clone(),
+        _ => format!("{} et. al.", e.speakers[0]),
+    }
+}
+
 impl CompilingPass<Vec<Event>> for TikzBackend {
     type Residual = String;
     type Error = TikzBackendCompilationError;
 
+    // TODO: Split this huge function into smaller ones.
     fn apply(events: Vec<Event>) -> Result<Self::Residual, Self::Error> {
         const POSTAMBLE: &str = r"
 \end{tikzpicture}
@@ -275,17 +288,7 @@ impl CompilingPass<Vec<Event>> for TikzBackend {
                 e.start_date.minute() * 5 / 3
             );
             r += ") {";
-
-            let speaker_string = match e.speakers.len() {
-                0 => {
-                    let (short_title, title_overflow) = e.title.split_at(std::cmp::min(25, e.title.len()));
-                    short_title.to_owned() + (if title_overflow.is_empty() { "" } else { "..." })
-                },
-                1 => e.speakers[0].clone(),
-                _ => format!("{} et. al.", e.speakers[0])
-            };
-            r += &speaker_string;
-
+            r += &speaker_string(&e);
             r += "};";
         }
 
