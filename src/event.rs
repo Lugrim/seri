@@ -67,6 +67,8 @@ pub struct Event {
     pub duration: u32,
     /// The event description
     pub description: Option<String>,
+    /// The list of declared speakers
+    pub speakers: Vec<String>,
 }
 
 /// The line of configuration given by the user is not a valid "key:value" pair.
@@ -168,6 +170,10 @@ impl FromStr for Event {
                     .parse()
                     .map_err(|err| ParsingError::CouldNotParseDuration { source: err })
             })?;
+        let speakers = settings.get("speakers")
+            .map_or_else(Vec::new, |l| l.split(',').map(|s| s.trim().to_owned())
+                         .filter(|s| !s.is_empty())
+                         .collect());
 
         Ok(Self {
             event_type,
@@ -175,6 +181,7 @@ impl FromStr for Event {
             duration,
             title: title.to_owned(),
             description,
+            speakers,
         })
     }
 }

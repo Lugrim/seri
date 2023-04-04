@@ -5,6 +5,7 @@ edition = "2021"
 authors = [
 	"Lugrim",
 	"Camille Le Bon",
+	"Amélie Gonzalez",
 ]
 license = "ACSL"
 repository = "https://github.com/Lugrim/timetable-language"

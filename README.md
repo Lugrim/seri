@@ -11,8 +11,8 @@
 	- [x] From file (CLAP)
 	- [x] I/O Error management (#1)
 - [ ] Enhance frontend
-	- [ ] Parse more headers
-		- [ ] speakers
+	- [x] Parse more headers
+		- [x] speakers
 		- [x] timestamp
 		- [x] duration
 	- [ ] Parse description as markdown

@@ -275,11 +275,17 @@ impl CompilingPass<Vec<Event>> for TikzBackend {
                 e.start_date.minute() * 5 / 3
             );
             r += ") {";
-            let (short_title, title_overflow) = e.title.split_at(std::cmp::min(25, e.title.len()));
-            r += short_title;
-            if !title_overflow.is_empty() {
-                r += "...";
-            }
+
+            let speaker_string = match e.speakers.len() {
+                0 => {
+                    let (short_title, title_overflow) = e.title.split_at(std::cmp::min(25, e.title.len()));
+                    short_title.to_owned() + (if title_overflow.is_empty() { "" } else { "..." })
+                },
+                1 => e.speakers[0].clone(),
+                _ => format!("{} et. al.", e.speakers[0])
+            };
+            r += &speaker_string;
+
             r += "};";
         }
 
