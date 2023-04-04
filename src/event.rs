@@ -66,7 +66,7 @@ pub struct Event {
     /// The duration of the event (in minutes)
     pub duration: u32,
     /// The event description
-    pub description: String,
+    pub description: Option<String>,
 }
 
 /// The line of configuration given by the user is not a valid "key:value" pair.
@@ -127,49 +127,58 @@ impl FromStr for Event {
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let trimmed = s.trim();
-        if let Some((header, description)) = trimmed.split_once("\n\n") {
-            let settings = split_pairs(header)?;
+        let split_result = trimmed.split_once("\n\n");
+        
+        let (header, description) = if let Some((first, second)) = split_result {
+            let text = second.trim();
+            if text.is_empty() {
+                (first.trim(), None)
+            } else {
+                (first.trim(), Some(text.to_owned()))
+            }
+        } else {
+            (trimmed, None)
+        };
 
-            let event_type = settings
-                .get("type")
-                .as_ref()
-                .map_or(Ok(Type::Talk), |talk_type| {
-                    Type::from_str(talk_type).map_err(ParsingError::from)
-                })?;
+        let settings = split_pairs(header)?;
 
-            let title = settings.get("title").map_or("(no title)", |&e| e);
+        let event_type = settings
+            .get("type")
+            .as_ref()
+            .map_or(Ok(Type::Talk), |talk_type| {
+                Type::from_str(talk_type).map_err(ParsingError::from)
+            })?;
 
-            let date_name = String::from("date");
-            let start_date = settings
-                .get(date_name.as_str())
-                .ok_or(ParsingError::SettingNotFound { name: date_name })
-                .and_then(|datetime| {
-                    Local
-                        .datetime_from_str(datetime, "%Y-%m-%d %H:%M")
-                        .map_err(|_| ParsingError::InvalidDateShape((*datetime).to_string()))
-                })?;
+        let title = settings.get("title").map_or("(no title)", |&e| e);
 
-            let duration_name = String::from("duration");
-            let duration = settings
-                .get(duration_name.as_str())
-                .ok_or(ParsingError::SettingNotFound {
-                    name: duration_name,
-                })
-                .and_then(|duration_setting| {
-                    duration_setting
-                        .parse()
-                        .map_err(|err| ParsingError::CouldNotParseDuration { source: err })
-                })?;
+        let date_name = String::from("date");
+        let start_date = settings
+            .get(date_name.as_str())
+            .ok_or(ParsingError::SettingNotFound { name: date_name })
+            .and_then(|datetime| {
+                Local
+                    .datetime_from_str(datetime, "%Y-%m-%d %H:%M")
+                    .map_err(|_| ParsingError::InvalidDateShape((*datetime).to_string()))
+            })?;
+
+        let duration_name = String::from("duration");
+        let duration = settings
+            .get(duration_name.as_str())
+            .ok_or(ParsingError::SettingNotFound {
+                name: duration_name,
+            })
+            .and_then(|duration_setting| {
+                duration_setting
+                    .parse()
+                    .map_err(|err| ParsingError::CouldNotParseDuration { source: err })
+            })?;
 
             Ok(Self {
                 event_type,
                 start_date,
                 duration,
                 title: title.to_owned(),
-                description: description.to_owned(),
+                description,
             })
-        } else {
-            Err(ParsingError::CouldNotSplit)
-        }
     }
 }
