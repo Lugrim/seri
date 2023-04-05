@@ -14,6 +14,7 @@ pub struct TikzBackend {}
 ///
 /// This structure contains datetimes that allows to draw a box containing all the events from which
 /// it was built in a calendar view.
+// TODO We may want to externalize that
 pub struct BoundingBox {
     up_left: DateTime<Local>,
     down_right: DateTime<Local>,
@@ -140,6 +141,8 @@ pub enum TikzBackendCompilationError {
     InvalidDatetime(#[from] InvalidDatetime),
 }
 
+// TODO Load this string from file or config
+// TODO Programmatically generate formats (tikzset)?
 const LATEX_INTRO: &str = r"\documentclass{standalone}
 \usepackage{tikz}
 
@@ -216,29 +219,36 @@ impl CompilingPass<Vec<Event>> for TikzBackend {
 
     // TODO: Split this huge function into smaller ones.
     fn apply(events: Vec<Event>) -> Result<Self::Residual, Self::Error> {
+        // TODO Load this string from file or config
         const POSTAMBLE: &str = r"
 \end{tikzpicture}
 \end{document}";
 
+        // Get the bounding box to adjust the timetable shown (hours and days)
         let bb = find_bounding_box(&events).ok_or(TikzBackendCompilationError::NoEventProvided)?;
 
         let first_hour = bb.up_left.hour();
+        // TODO Do not add 1 if the hour is an integer
         let last_hour = bb.down_right.hour() + 1;
 
         let day_count = (bb.last_day()? - bb.first_day()?).num_days() + 1;
         let day_end = day_count + 1;
-
+        
+        // Create the return string
         let mut r: String = LATEX_INTRO.to_owned();
 
+        // Create a "for each hour" tikz command
         let foreach = r"
     \foreach \time   [evaluate=\time] in "
             .to_owned()
             + &format!("{{{first_hour},...,{last_hour}}}");
 
+        // For each hour, write it on the left
         r += &foreach;
         r += r"
             \node[anchor=east] at (1,\time) {\time:00};";
 
+        // Draw the vertical dividers between days
         r += r"
     % Draw some day dividers.
     \foreach \day   [evaluate=\day] in ";
@@ -251,6 +261,7 @@ impl CompilingPass<Vec<Event>> for TikzBackend {
         r += &format!("{last_hour}");
         r += ");";
 
+        // Draw the horizontal dividers on hours
         r += r"
 	% Draw some hours dividers.";
         r += &foreach;
@@ -259,6 +270,7 @@ impl CompilingPass<Vec<Event>> for TikzBackend {
         r += &format!("{day_end}");
         r += r", \time);";
 
+        // Display the date headers
         for i in 0..day_count {
             let col = i + 1;
             r += r"
@@ -271,23 +283,29 @@ impl CompilingPass<Vec<Event>> for TikzBackend {
             r += r"};";
         }
 
+        // Display all our event nodes
         for e in events {
             r += r"
     \node[";
+            // declare the event type for the format
             r += &format!("{}", e.event_type);
             r += "={";
+            // Compute event length as an hour fraction (block height)
             r += &format!("{:.2}", f64::from(e.duration) / 60.);
             r += "}{";
-            r += "1"; // TODO Compute simultaneous events
+            r += "1"; // TODO Compute simultaneous event count
             r += "}] at (";
+            // Compute beginning day number (x position)
             r += &format!("{}", e.start_date.day() - bb.up_left.day() + 1);
             r += ",";
+            // Compute beginning hour (y position)
             r += &format!(
                 "{}.{:.2}",
                 e.start_date.format("%H"),
                 e.start_date.minute() * 5 / 3
             );
             r += ") {";
+            // Create the string to fill up the event block
             r += &speaker_string(&e);
             r += "};";
         }
