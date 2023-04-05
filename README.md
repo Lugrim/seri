@@ -1,8 +1,8 @@
-# Seri
+# Seri
 
 A way too much over-engineered timetable language compiler.
 
-## Running Seri
+## Running Seri
 
 Seri is written in Rust, so you need to install the Rust toolchain to run it.
 
@@ -32,7 +32,7 @@ Options:
   -V, --version              Print version
 ```
 
-## Seri language
+## Seri language
 
 TODO : Write a proper language specification
 

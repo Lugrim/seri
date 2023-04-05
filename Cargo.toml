@@ -1,11 +1,12 @@
 [package]
 name = "seri"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2021"
 authors = [
 	"Lugrim",
 	"Camille Le Bon",
 	"Amélie Gonzalez",
+	"Hugo Reymond",
 ]
 license = "ACSL"
 repository = "https://github.com/Lugrim/timetable-language"
