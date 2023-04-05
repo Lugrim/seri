@@ -1,4 +1,40 @@
-# TODO
+# Seri
+
+A way too much over-engineered timetable language compiler.
+
+## Running Seri
+
+Seri is written in Rust, so you need to install the Rust toolchain to run it.
+
+To generate a schedule from a file, run:
+```bash
+cargo run data/example.seri
+```
+
+You can also generate a schedule from stdin:
+```bash
+cat data/example.seri > cargo run
+```
+
+## Seri compiler command-line interface
+
+```
+Usage: seri [FILE] [OUTPUT_FORMAT]
+
+Arguments:
+  [FILE]           File to compile. If not present, will read from standard input
+  [OUTPUT_FORMAT]  Output format. Default  [default: tikz]
+
+Options:
+  -h, --help     Print help
+  -V, --version  Print version
+```
+
+## Seri language
+
+TODO : Write a proper language specification
+
+## TODO
 
 - [x] Refactor as a compiler structure
 	- [x] Refactor base code
