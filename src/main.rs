@@ -22,16 +22,36 @@
 use crate::{
     event::Event,
     passes::{
+        html::HTMLBackendCompilationError,
         latex::{TikzBackend, TikzBackendCompilationError},
         parser::ParseTimetable,
         PassInput,
     },
 };
 use clap::Parser;
-use std::{fs, io::Read};
+use passes::html::{HTMLBackend, HTMLBackendOptions};
+use std::{
+    fs::{self, File},
+    io::{Read, Write},
+};
+use thiserror::Error;
 
 pub mod event;
 pub mod passes;
+
+/// Help me to do something cleaner than this please
+#[derive(Debug, Error)]
+pub enum CompilerError {
+    /// An error occured in the HTML backend
+    #[error("Error while trying to generate the HTML output: {0}")]
+    CouldNotGenerateHTML(#[from] HTMLBackendCompilationError),
+    /// An error occured in the Tikz backend
+    #[error("Error while trying to generate the Tikz output: {0}")]
+    CouldNotGenerateTikz(#[from] TikzBackendCompilationError),
+    /// The output format selected is not supported
+    #[error("Backend not implemented yet: {0}")]
+    BackendNotImplemented(String),
+}
 
 /// Structure meant to store CLAP command line arguments
 #[derive(Parser, Debug)]
@@ -40,8 +60,17 @@ struct Args {
     /// An optional path to a file
     #[arg(help = "File to compile. If not present, will read from standard input")]
     file: Option<String>,
-    #[arg(help = "Output format. Default ", default_value_t = String::from("tikz"))]
-    output_format: String,
+    #[arg(short, long, value_name = "FORMAT", help = "Output format", default_value_t = String::from("tikz"))]
+    format: String,
+    #[arg(short, long, value_name = "TEMPLATE", help = "Template to use, if any")]
+    template: Option<String>,
+    #[arg(
+        short,
+        long,
+        value_name = "FILE",
+        help = "Output file. If not present, will output to stdout"
+    )]
+    output: Option<String>,
 }
 
 impl PassInput for &str {}
@@ -53,13 +82,20 @@ fn generate_tikz(content: &str) -> Result<String, TikzBackendCompilationError> {
         .chain_pass::<TikzBackend>()
 }
 
-fn generate_html(content: &str) -> Result<String, TikzBackendCompilationError> {
-    todo!();
+fn generate_html(
+    options: HTMLBackendOptions,
+    content: &str,
+) -> Result<String, HTMLBackendCompilationError> {
+    HTMLBackend::configure(options);
+    content
+        .chain_pass::<ParseTimetable>()?
+        .chain_pass::<HTMLBackend>()
 }
 
 fn main() {
     let args = Args::parse();
 
+    let template = args.template.clone();
     let content = args.file.map_or_else(
         || {
             let mut buffer = Vec::new();
@@ -69,15 +105,27 @@ fn main() {
         |filepath| fs::read_to_string(filepath).expect("Could not read file"),
     );
 
-    match args.output_format.as_str() {
-        "tikz" => match generate_tikz(&content) {
-            Ok(tikz) => println!("{tikz}"),
-            Err(err) => eprintln!("{err}"),
+    let html_opts = HTMLBackendOptions {
+        template_path: template,
+    };
+
+    let output: Result<String, CompilerError> = match args.format.as_str() {
+        "tikz" => generate_tikz(&content).map_err(|err| CompilerError::CouldNotGenerateTikz(err)),
+        "html" => generate_html(html_opts, &content)
+            .map_err(|err| CompilerError::CouldNotGenerateHTML(err)),
+        other => Err(CompilerError::BackendNotImplemented(other.to_string())),
+    };
+
+    match output {
+        Ok(data) => match args.output {
+            Some(file_path) => {
+                let mut file =
+                    File::create(&file_path).expect(format!("Couldnt open {file_path}").as_str());
+                file.write_all(data.as_bytes())
+                    .expect("Couldnt write to {file_path}");
+            }
+            None => println!("{data}"),
         },
-        "html" => match generate_html(&content) {
-            Ok(tikz) => println!("{tikz}"),
-            Err(err) => eprintln!("{err}"),
-        },
-        _ => eprintln!("Unknow format {}", args.output_format)
+        Err(err) => eprintln!("{err}"),
     }
 }

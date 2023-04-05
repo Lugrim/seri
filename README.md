@@ -19,15 +19,17 @@ cat data/example.seri > cargo run
 ## Seri compiler command-line interface
 
 ```
-Usage: seri [FILE] [OUTPUT_FORMAT]
+Usage: seri [OPTIONS] [FILE]
 
 Arguments:
-  [FILE]           File to compile. If not present, will read from standard input
-  [OUTPUT_FORMAT]  Output format. Default  [default: tikz]
+  [FILE]  File to compile. If not present, will read from standard input
 
 Options:
-  -h, --help     Print help
-  -V, --version  Print version
+  -f, --format <FORMAT>      Output format [default: tikz]
+  -t, --template <TEMPLATE>  Template to use, if any
+  -o, --output <FILE>        Output file. If not present, will output to stdout
+  -h, --help                 Print help
+  -V, --version              Print version
 ```
 
 ## Seri language
