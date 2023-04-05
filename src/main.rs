@@ -40,6 +40,8 @@ struct Args {
     /// An optional path to a file
     #[arg(help = "File to compile. If not present, will read from standard input")]
     file: Option<String>,
+    #[arg(help = "Output format. Default ", default_value_t = String::from("tikz"))]
+    output_format: String,
 }
 
 impl PassInput for &str {}
@@ -49,6 +51,10 @@ fn generate_tikz(content: &str) -> Result<String, TikzBackendCompilationError> {
     content
         .chain_pass::<ParseTimetable>()?
         .chain_pass::<TikzBackend>()
+}
+
+fn generate_html(content: &str) -> Result<String, TikzBackendCompilationError> {
+    todo!();
 }
 
 fn main() {
@@ -63,8 +69,15 @@ fn main() {
         |filepath| fs::read_to_string(filepath).expect("Could not read file"),
     );
 
-    match generate_tikz(&content) {
-        Ok(tikz) => println!("{tikz}"),
-        Err(err) => eprintln!("{err}"),
+    match args.output_format.as_str() {
+        "tikz" => match generate_tikz(&content) {
+            Ok(tikz) => println!("{tikz}"),
+            Err(err) => eprintln!("{err}"),
+        },
+        "html" => match generate_html(&content) {
+            Ok(tikz) => println!("{tikz}"),
+            Err(err) => eprintln!("{err}"),
+        },
+        _ => eprintln!("Unknow format {}", args.output_format)
     }
 }
