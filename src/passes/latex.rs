@@ -206,7 +206,7 @@ fn speaker_string(e: &Event) -> String {
             short.to_owned() + rest
         }
         1 => e.speakers[0].clone(),
-        _ => format!("{} et. al.", e.speakers[0]),
+        _ => format!("{} et~al.", e.speakers[0]),
     }
 }
 
