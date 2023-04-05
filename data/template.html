@@ -1,0 +1,63 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>My template</title>
+    <style>
+      body {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        flex-direction: column;
+
+      }
+
+      table {
+        width: 100%;
+        max-width: 50rem;
+        font-family: -system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
+      }
+
+      th {
+        font-weight: normal;
+        border-top: thin dotted #ccc;
+      }
+
+      td {
+        font-size: 0.8rem;
+        font-weight: bold;
+        line-height: 1.4;
+        border-radius: 0.2rem;
+        transition: opacity 0.3s ease;
+        width: 40%;
+      }
+
+      td > span {
+        font-size: 0.8em;
+        font-weight: normal;
+        display: block;
+        width: 100%;
+      }
+
+      .meal {
+        background-color: #ffa726;
+      }
+      .fun {
+        background-color: #9ccc65;
+      }
+      .talk {
+        background-color: #ff8a65;
+      }
+      .other {
+        background-color: #b3e5fc;
+      }
+
+      .light {
+        color: #ccc;
+        font-weight: normal;
+      }
+    </style>
+  </head>
+  <body>
+    {{ CALENDAR }}
+  </body>
+</html>
