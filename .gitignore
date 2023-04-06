@@ -1,1 +1,11 @@
 /target
+
+# Common files that would come from the compilation of a pdf, typically with
+# pdflatex.
+/*.aux
+/*.log
+/*.pdf
+/*.tex
+
+# HTML output
+/*.html
