@@ -22,18 +22,15 @@
 use crate::{
     event::Event,
     passes::{
-        html::HTMLBackendCompilationError,
+        html::{HTMLBackend, HTMLBackendCompilationError, HTMLBackendOptions},
         latex::{TikzBackend, TikzBackendCompilationError},
         parser::ParseTimetable,
         PassInput,
     },
 };
+
 use clap::Parser;
-use passes::html::{HTMLBackend, HTMLBackendOptions};
-use std::{
-    fs::{self, File},
-    io::{Read, Write},
-};
+use std::{fs, io::Read};
 use thiserror::Error;
 
 pub mod event;
@@ -60,8 +57,8 @@ struct Args {
     /// An optional path to a file
     #[arg(help = "File to compile. If not present, will read from standard input")]
     file: Option<String>,
-    #[arg(short, long, value_name = "FORMAT", help = "Output format", default_value_t = String::from("tikz"))]
-    format: String,
+    #[arg(short, long, value_enum, value_name = "FORMAT", help = "Output format", default_value_t=Format::Tikz)]
+    format: Format,
     #[arg(short, long, value_name = "TEMPLATE", help = "Template to use, if any")]
     template: Option<String>,
     #[arg(
@@ -71,6 +68,12 @@ struct Args {
         help = "Output file. If not present, will output to stdout"
     )]
     output: Option<String>,
+}
+
+#[derive(clap::ValueEnum, Clone, Debug)]
+enum Format {
+    Tikz,
+    HTML,
 }
 
 impl PassInput for &str {}
@@ -92,6 +95,26 @@ fn generate_html(
         .chain_pass::<HTMLBackend>()
 }
 
+/// Write the output to a file or to stdout
+///
+/// # Arguments
+///
+/// * `output` - The path to the output file. If `None`, will output to stdout
+/// * `data` - The data to write
+///
+/// # Returns
+///
+/// * `Ok(())` if the output was written successfully
+/// * `Err(std::io::Error)` if the output could not be written
+///
+fn write_output(output: &Option<String>, data: String) -> Result<(), std::io::Error> {
+    match output {
+        Some(file_path) => fs::write(file_path, data)?,
+        None => println!("{data}"),
+    }
+    Ok(())
+}
+
 fn main() {
     let args = Args::parse();
 
@@ -109,23 +132,19 @@ fn main() {
         template_path: template,
     };
 
-    let output: Result<String, CompilerError> = match args.format.as_str() {
-        "tikz" => generate_tikz(&content).map_err(|err| CompilerError::CouldNotGenerateTikz(err)),
-        "html" => generate_html(html_opts, &content)
-            .map_err(|err| CompilerError::CouldNotGenerateHTML(err)),
-        other => Err(CompilerError::BackendNotImplemented(other.to_string())),
+    let output: Result<String, CompilerError> = match args.format {
+        Format::Tikz => generate_tikz(&content).map_err(CompilerError::from),
+        Format::HTML => generate_html(html_opts, &content).map_err(CompilerError::from),
     };
 
     match output {
-        Ok(data) => match args.output {
-            Some(file_path) => {
-                let mut file =
-                    File::create(&file_path).expect(format!("Couldnt open {file_path}").as_str());
-                file.write_all(data.as_bytes())
-                    .expect("Couldnt write to {file_path}");
-            }
-            None => println!("{data}"),
-        },
+        Ok(data) => write_output(&args.output, data).unwrap_or_else(|e| {
+            panic!(
+                "Couldn't write to file {}: {}",
+                &args.output.unwrap_or("stdout".to_string()),
+                e.to_string()
+            )
+        }),
         Err(err) => eprintln!("{err}"),
     }
 }
