@@ -7,6 +7,11 @@ use thiserror::Error;
 /// Backend outputing events to a standalone HTML document containing a timetable
 pub struct HTMLBackend {}
 
+/// A Trait for converting a value to a [`String`] HTML representation
+pub trait ToHTML {
+    /// Convert the given value to a [`String`] HTML representation
+    fn to_html(&self) -> String;
+}
 /// Options for the HTML backend
 pub struct HTMLBackendOptions {
     /// Path to the template file. If not set, the default template (`data/template.html`) will be used.
@@ -24,35 +29,42 @@ pub enum HTMLBackendCompilationError {
     /// The event could not be parsed.
     #[error(transparent)]
     CouldNotParseEvent(#[from] <Event as FromStr>::Err),
-    /// The event could not be parsed.
+    /// An error occurred while trying to read the template file
     #[error("Error while trying to read the template file: {0}")]
     CouldNotReadTemplate(#[from] std::io::Error),
 }
 
 fn get_template() -> Result<String, std::io::Error> {
-    let options = OPTIONS.lock().unwrap();
-    match options.template_path.as_ref() {
+    let template_path = OPTIONS.lock().unwrap().template_path.clone();
+    match template_path.as_ref() {
         None => Ok(include_str!("../../data/template.html").to_string()),
         Some(path) => std::fs::read_to_string(path),
     }
 }
 
-fn event_to_string(event: &Event) -> String {
-    let duration = std::cmp::max(event.duration / 30, 1);
-    let class = event.event_type.to_string();
-    let mut res = format!("\t\t<td class=\"{class}\" rowspan=\"{duration}\">");
-    let (title, _) = event.title.split_at(min(event.title.len(), 25));
-    res.push_str(title);
-    res.push_str("<span>");
-    for speaker in &event.speakers {
-        res.push_str(speaker.as_str());
+impl ToHTML for Event {
+    fn to_html(&self) -> String {
+        let duration = std::cmp::max(self.duration / 30, 1);
+        let class = self.event_type.to_string();
+        let mut res = format!("\t\t<td class=\"{class}\" rowspan=\"{duration}\">");
+        let (title, _) = self.title.split_at(min(self.title.len(), 25));
+        res.push_str(title);
+        res.push_str("<span>");
+        for speaker in &self.speakers {
+            res.push_str(speaker.as_str());
+        }
+        res.push_str("</span></td>\n");
+        res
     }
-    res.push_str("</span></td>\n");
-    res
 }
 
 impl HTMLBackend {
     /// Configure the HTML backend
+    ///
+    /// # Arguments
+    ///
+    /// * `opts` - The options to use, see [`HTMLBackendOptions`]
+    ///
     pub fn configure(opts: HTMLBackendOptions) {
         *OPTIONS.lock().unwrap() = opts;
     }
@@ -72,7 +84,7 @@ impl CompilingPass<Vec<Event>> for HTMLBackend {
                 .iter()
                 .filter(|ev| ev.start_date.hour() >= i && ev.start_date.hour() < i + 1)
             {
-                str.push_str(event_to_string(&event).as_str());
+                str.push_str(event.to_html().as_str());
             }
             str.push_str("</tr>\n");
             str.push_str(format!("\t<tr><th class=\"light\">{i}:30</th></tr>\n").as_str());
