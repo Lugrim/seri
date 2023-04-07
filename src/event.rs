@@ -1,6 +1,7 @@
 //! Specification of a timetable event
 
 use chrono::prelude::*;
+use chrono::{DateTime, Duration, Local};
 use std::collections::HashMap;
 use std::fmt;
 use std::str::FromStr;
@@ -186,4 +187,123 @@ impl FromStr for Event {
             speakers,
         })
     }
+}
+
+/// Bounding box of event.
+///
+/// This structure contains datetimes that allows to draw a box containing all the events from which
+/// it was built in a calendar view.
+pub struct BoundingBox {
+    /// Upper left point
+    pub up_left: DateTime<Local>,
+    /// Lower right point
+    pub down_right: DateTime<Local>,
+}
+
+/// The datetime is not valid.
+#[derive(Debug, Error)]
+#[error("the datetime created is invalid")]
+pub struct InvalidDatetime;
+
+impl BoundingBox {
+    /// Get a datetime of the first day at 00:00 of the bounding box.
+    ///
+    /// # Errors
+    ///
+    /// Returns an [`InvalidDatetime`] if it is not possible to build the datetime.
+    pub fn first_day(&self) -> Result<DateTime<Local>, InvalidDatetime> {
+        self.up_left
+            .with_hour(0)
+            .and_then(|dt| dt.with_minute(0))
+            .ok_or(InvalidDatetime)
+    }
+
+    /// Get a datetime of the last day at 00:00 of the bounding box
+    ///
+    /// # Errors
+    ///
+    /// Returns an [`InvalidDatetime`] if it is not possible to build the datetime.
+    pub fn last_day(&self) -> Result<DateTime<Local>, InvalidDatetime> {
+        self.down_right
+            .with_hour(0)
+            .and_then(|dt| dt.with_minute(0))
+            .ok_or(InvalidDatetime)
+    }
+
+    /// Create a datetime that represent the day of the earlier of both datetimes and at the time of
+    /// day of the earlier of them.
+    ///
+    /// # Example
+    ///
+    /// If first is the November, 06 at 9:00 and the second is November, 08 at 8:00, the result is
+    /// the November, 06 at 8:00.
+    #[must_use]
+    pub fn most_top_left(
+        first: &DateTime<Local>,
+        second: &DateTime<Local>,
+    ) -> Option<DateTime<Local>> {
+        let mut res = *first;
+
+        if second.time() < first.time() {
+            res = res.with_hour(second.hour())?.with_minute(second.minute())?;
+        }
+
+        if second.date_naive() < first.date_naive() {
+            res = res
+                .with_day(second.day())?
+                .with_month(second.month())?
+                .with_year(second.year())?;
+        }
+
+        Some(res)
+    }
+
+    /// Create a datetime that represent the day of the later of both datetimes and at the time of
+    /// day of the later of them.
+    ///
+    /// # Example
+    ///
+    /// If first is the November, 06 at 9:00 and the second is November, 08 at 8:00, the result is
+    /// the November, 08 at 9:00.
+    #[must_use]
+    pub fn most_bottom_right(
+        first: &DateTime<Local>,
+        second: &DateTime<Local>,
+    ) -> Option<DateTime<Local>> {
+        let mut res = *first;
+
+        if first.time() < second.time() {
+            res = res.with_hour(second.hour())?.with_minute(second.minute())?;
+        }
+
+        if first.date_naive() < second.date_naive() {
+            res = res
+                .with_day(second.day())?
+                .with_month(second.month())?
+                .with_year(second.year())?;
+        }
+
+        Some(res)
+    }
+}
+
+/// TODO Do not assume everything is in the same month
+/// Will find the bounding box (date, times) to generate a timetable
+#[must_use]
+pub fn find_bounding_box(events: &Vec<Event>) -> Option<BoundingBox> {
+    let first = events.get(0)?;
+    let mut up_left = first.start_date;
+    let mut down_right = first.start_date;
+
+    for e in events {
+        let end_of_event = e.start_date + Duration::minutes(i64::from(e.duration));
+
+        up_left = BoundingBox::most_top_left(&up_left, &e.start_date)?;
+        down_right = BoundingBox::most_bottom_right(&down_right, &end_of_event)?;
+    }
+
+    Some(BoundingBox {
+        up_left,
+        down_right,
+    })
 }
