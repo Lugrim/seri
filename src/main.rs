@@ -141,8 +141,8 @@ fn main() {
         Ok(data) => write_output(&args.output, data).unwrap_or_else(|e| {
             panic!(
                 "Couldn't write to file {}: {}",
-                &args.output.unwrap_or("stdout".to_string()),
-                e.to_string()
+                &args.output.unwrap_or_else(|| "stdout".to_string()),
+                e
             )
         }),
         Err(err) => eprintln!("{err}"),
