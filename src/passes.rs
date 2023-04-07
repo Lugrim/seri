@@ -6,7 +6,37 @@ pub mod parser;
 
 /// A trait defining compilation passes
 /// Compilation passes should be chainable
-pub trait CompilingPass<T, C=()> {
+///
+/// - T is the type of data that the pass can be applied to
+/// - C is the type of context that the pass can be applied with
+///
+/// # Example
+///
+/// ```rust
+/// // Example of a pass that truncates a string to a given length
+///
+/// use crate::passes::CompilingPass;
+///
+/// struct TruncatePass;
+///
+/// // The implementation of the pass takes a `&str` as input and returns a `String`
+/// // The context in this case is a `usize` which configure the final length
+/// impl CompilingPass<&str, usize> for TruncatePass {
+///     type Residual = String;
+///     type Error = ();
+///     fn apply_with(data: &str, ctx: usize) -> Result<Self::Residual, Self::Error> {
+///         Ok(data[..ctx].to_string())
+///     }
+///     fn apply(data: &str) -> Result<Self::Residual, Self::Error> {
+///         Ok(data.to_string())
+///     }
+/// }
+///
+/// assert_eq!(TruncatePass::apply_with("Hello", 3), Ok("Hel".to_string()));
+/// assert_eq!("Hello".chain_pass_with::<TruncatePass, usize>(3), Ok("Hel".to_string()));
+/// ```
+///
+pub trait CompilingPass<T, C = ()> {
     /// Type of data that is returned by the pass if it succeeds.
     type Residual;
     /// Type of errors that the pass returns when it fails.
@@ -50,7 +80,10 @@ pub trait PassInput: Sized {
     /// # Errors
     ///
     /// Can return a fitting error if a compilation pass cannot be applied.
-    fn chain_pass_with<P: CompilingPass<Self, U>, U>(self, ctx: U) -> Result<P::Residual, P::Error> {
+    fn chain_pass_with<P: CompilingPass<Self, U>, U>(
+        self,
+        ctx: U,
+    ) -> Result<P::Residual, P::Error> {
         P::apply_with(self, ctx)
     }
 }

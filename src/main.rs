@@ -71,6 +71,7 @@ struct Args {
 }
 
 #[derive(clap::ValueEnum, Clone, Debug)]
+#[allow(clippy::upper_case_acronyms)]
 enum Format {
     Tikz,
     HTML,
@@ -89,10 +90,9 @@ fn generate_html(
     options: HTMLBackendOptions,
     content: &str,
 ) -> Result<String, HTMLBackendCompilationError> {
-    HTMLBackend::configure(options);
     content
         .chain_pass::<ParseTimetable>()?
-        .chain_pass::<HTMLBackend>()
+        .chain_pass_with::<HTMLBackend, HTMLBackendOptions>(options)
 }
 
 /// Write the output to a file or to stdout
