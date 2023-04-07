@@ -29,24 +29,20 @@ pub enum HTMLBackendCompilationError {
     CouldNotReadTemplate(#[from] std::io::Error),
 }
 
-fn get_template() -> Result<String, HTMLBackendCompilationError> {
+fn get_template() -> Result<String, std::io::Error> {
     let options = OPTIONS.lock().unwrap();
-    if let Some(path) = &options.template_path {
-        match std::fs::read_to_string(path) {
-            Ok(template) => Ok(template),
-            Err(err) => Err(HTMLBackendCompilationError::CouldNotReadTemplate(err)),
-        }
-    } else {
-        Ok(include_str!("../../data/template.html").to_string())
+    match options.template_path.as_ref() {
+        None => Ok(include_str!("../../data/template.html").to_string()),
+        Some(path) => std::fs::read_to_string(path),
     }
 }
 
 fn event_to_string(event: &Event) -> String {
     let duration = std::cmp::max(event.duration / 30, 1);
     let class = event.event_type.to_string();
-    let mut res = String::from(format!("\t\t<td class=\"{class}\" rowspan=\"{duration}\">"));
+    let mut res = format!("\t\t<td class=\"{class}\" rowspan=\"{duration}\">");
     let (title, _) = event.title.split_at(min(event.title.len(), 25));
-    res.push_str(format!("{}", title).as_str());
+    res.push_str(title);
     res.push_str("<span>");
     for speaker in &event.speakers {
         res.push_str(speaker.as_str());
@@ -71,7 +67,7 @@ impl CompilingPass<Vec<Event>> for HTMLBackend {
         let mut str = String::new();
         str.push_str("<table><tbody>\n");
         for i in 9..21 {
-            str.push_str(format!("\t<tr><th>{}:00</th>", i).as_str());
+            str.push_str(format!("\t<tr><th>{i}:00</th>").as_str());
             for event in events
                 .iter()
                 .filter(|ev| ev.start_date.hour() >= i && ev.start_date.hour() < i + 1)
@@ -79,7 +75,7 @@ impl CompilingPass<Vec<Event>> for HTMLBackend {
                 str.push_str(event_to_string(&event).as_str());
             }
             str.push_str("</tr>\n");
-            str.push_str(format!("\t<tr><th class=\"light\">{}:30</th></tr>\n", i).as_str());
+            str.push_str(format!("\t<tr><th class=\"light\">{i}:30</th></tr>\n").as_str());
         }
         str.push_str("</tbody></table>\n");
         Ok(template.replace("{{ CALENDAR }}", &str))
