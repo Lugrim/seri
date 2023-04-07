@@ -59,7 +59,13 @@ TODO : Write a proper language specification
 		- [x] minimal
 		- [x] Print day in header
 		- [ ] load preamble and postamble from files
-	- [ ] HTML
-		- [ ] minimal
+	- [x] HTML
+		- [x] minimal
+		- [ ] Automatically compute the number or days/hours of the seminar
+		- [ ] Handle event not starting on round hours
+		- [ ] Display the date on top of the planning
+		- [ ] Display the abstract next to the planning
+- [ ] Templating
+	- [ ] Add some real templating
 - [x] Documentation
 - [x] Put clippy in giga chad mode
