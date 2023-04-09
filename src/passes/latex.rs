@@ -2,7 +2,7 @@
 
 use std::str::FromStr;
 
-use chrono::{Datelike, Duration, Timelike};
+use chrono::{DateTime, Datelike, Duration, Local, Timelike};
 use thiserror::Error;
 
 use crate::{
@@ -99,104 +99,132 @@ fn speaker_string(e: &Event) -> String {
     }
 }
 
+fn generate_foreach_hour(first_hour: u32, last_hour: u32) -> String {
+    r"
+    \foreach \time   [evaluate=\time] in "
+        .to_owned()
+        + &format!("{{{first_hour},...,{last_hour}}}")
+}
+fn generate_hour_dividers(first_hour: u32, last_hour: u32, day_count: u32) -> String {
+    // Draw the horizontal dividers on hours
+    generate_foreach_hour(first_hour, last_hour)
+        + r"
+        \draw (1,\time) -- ("
+        + &format!("{}", day_count + 1)
+        + r", \time);"
+}
+
+fn generate_hour_marks(first_hour: u32, last_hour: u32) -> String {
+    // For each hour, write it on the left
+    generate_foreach_hour(first_hour, last_hour)
+        + r"
+            \node[anchor=east] at (1,\time) {\time:00};"
+}
+
+fn generate_tikz_node(e: &Event, up_left_day: u32) -> String {
+    let mut r = r"\node[".to_owned();
+    // declare the event type for the format
+    r += &format!("{}", e.event_type);
+    r += "={";
+    // Compute event length as an hour fraction (block height)
+    r += &format!("{:.2}", f64::from(e.duration) / 60.);
+    r += "}{";
+    r += "1"; // TODO Compute simultaneous event count
+    r += "}] at (";
+    // Compute beginning day number (x position)
+    r += &format!("{}", e.start_date.day() - up_left_day + 1);
+    r += ",";
+    // Compute beginning hour (y position)
+    r += &format!(
+        "{}.{:.2}",
+        e.start_date.format("%H"),
+        e.start_date.minute() * 5 / 3
+    );
+    r += ") {";
+    // Create the string to fill up the event block
+    r += &speaker_string(e);
+    r += "};";
+    r
+}
+
+fn generate_day_dividers(first_hour: u32, last_hour: u32, day_count: u32) -> String {
+    // Draw the vertical dividers between days
+    let mut r = r"
+    % Draw some day dividers.
+    \foreach \day   [evaluate=\day] in "
+        .to_owned();
+    r += &format!("{{1,...,{}}}", day_count + 1);
+
+    r += r"
+        \draw (\day,";
+    r += &format!("{}", first_hour - 1);
+    r += r") -- (\day,";
+    r += &format!("{last_hour}");
+    r += ");";
+    r
+}
+
+fn generate_date_headers(first_hour: u32, day_count: u32, up_left: DateTime<Local>) -> String {
+    let mut r = String::new();
+    // Display the date headers
+    for i in 0..day_count {
+        let col = i + 1;
+        r += r"
+        \node[anchor=south] at (";
+        r += &format!("{col}");
+        r += r".5, ";
+        r += &format!("{}", first_hour - 1);
+        r += ".5) {";
+        r += &format!(
+            "{}",
+            (up_left + Duration::days(i64::from(i))).format("%A, %B %e")
+        );
+        r += r"};";
+    }
+    r
+}
+
+fn generate_postamble() -> String {
+    r"
+\end{tikzpicture}
+\end{document}"
+        .to_owned()
+}
+
 impl CompilingPass<Vec<Event>> for TikzBackend {
     type Residual = String;
     type Error = TikzBackendCompilationError;
 
     // TODO: Split this huge function into smaller ones.
+    #[allow(clippy::cast_possible_truncation)]
+    #[allow(clippy::cast_sign_loss)]
     fn apply(events: Vec<Event>) -> Result<Self::Residual, Self::Error> {
-        // TODO Load this string from file or config
-        const POSTAMBLE: &str = r"
-\end{tikzpicture}
-\end{document}";
-
         // Get the bounding box to adjust the timetable shown (hours and days)
         let bb = find_bounding_box(&events).ok_or(TikzBackendCompilationError::NoEventProvided)?;
 
         let first_hour = bb.up_left.hour();
-        // TODO Do not add 1 if the hour is an integer
-        let last_hour = bb.down_right.hour() + 1;
 
-        let day_count = (bb.last_day()? - bb.first_day()?).num_days() + 1;
-        let day_end = day_count + 1;
+        // TODO Do not add 1 if the hour is an integer
+        let last_hour = bb.down_right.hour() + u32::from(bb.down_right.minute() != 0);
+
+        let day_count = ((bb.last_day()? - bb.first_day()?).num_days() + 1) as u32;
 
         // Create the return string
         let mut r: String = LATEX_INTRO.to_owned();
 
-        // Create a "for each hour" tikz command
-        let foreach = r"
-    \foreach \time   [evaluate=\time] in "
-            .to_owned()
-            + &format!("{{{first_hour},...,{last_hour}}}");
+        r += &generate_hour_marks(first_hour, last_hour);
+        r += &generate_hour_dividers(first_hour, last_hour, day_count);
 
-        // For each hour, write it on the left
-        r += &foreach;
-        r += r"
-            \node[anchor=east] at (1,\time) {\time:00};";
-
-        // Draw the vertical dividers between days
-        r += r"
-    % Draw some day dividers.
-    \foreach \day   [evaluate=\day] in ";
-        r += &format!("{{1,...,{day_end}}}");
-
-        r += r"
-        \draw (\day,";
-        r += &format!("{}", first_hour - 1);
-        r += r") -- (\day,";
-        r += &format!("{last_hour}");
-        r += ");";
-
-        // Draw the horizontal dividers on hours
-        r += r"
-	% Draw some hours dividers.";
-        r += &foreach;
-        r += r"
-        \draw (1,\time) -- (";
-        r += &format!("{day_end}");
-        r += r", \time);";
-
-        // Display the date headers
-        for i in 0..day_count {
-            let col = i + 1;
-            r += r"
-        \node[anchor=south] at (";
-            r += &format!("{col}");
-            r += r".5, ";
-            r += &format!("{}", first_hour - 1);
-            r += ".5) {";
-            r += &format!("{}", (bb.up_left + Duration::days(i)).format("%A, %B %e"));
-            r += r"};";
-        }
+        r += &generate_day_dividers(first_hour, last_hour, day_count);
+        r += &generate_date_headers(first_hour, day_count, bb.up_left);
 
         // Display all our event nodes
         for e in events {
-            r += r"
-    \node[";
-            // declare the event type for the format
-            r += &format!("{}", e.event_type);
-            r += "={";
-            // Compute event length as an hour fraction (block height)
-            r += &format!("{:.2}", f64::from(e.duration) / 60.);
-            r += "}{";
-            r += "1"; // TODO Compute simultaneous event count
-            r += "}] at (";
-            // Compute beginning day number (x position)
-            r += &format!("{}", e.start_date.day() - bb.up_left.day() + 1);
-            r += ",";
-            // Compute beginning hour (y position)
-            r += &format!(
-                "{}.{:.2}",
-                e.start_date.format("%H"),
-                e.start_date.minute() * 5 / 3
-            );
-            r += ") {";
-            // Create the string to fill up the event block
-            r += &speaker_string(&e);
-            r += "};";
+            r += &generate_tikz_node(&e, bb.up_left.day());
         }
 
-        r += POSTAMBLE;
+        r += &generate_postamble();
+
         Ok(r)
     }
 }
