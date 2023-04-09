@@ -25,7 +25,7 @@ Arguments:
   [FILE]  File to compile. If not present, will read from standard input
 
 Options:
-  -f, --format <FORMAT>      Output format [default: tikz]
+  -f, --format <FORMAT>      Output format [default: tikz] [possible values: tikz, html]
   -t, --template <TEMPLATE>  Template to use, if any
   -o, --output <FILE>        Output file. If not present, will output to stdout
   -h, --help                 Print help
@@ -55,10 +55,10 @@ TODO : Write a proper language specification
 		- [x] duration
 	- [ ] Parse description as markdown
 - [ ] Add backends
-	- [ ] tikz
+	- [x] tikz
 		- [x] minimal
 		- [x] Print day in header
-		- [ ] load preamble and postamble from files
+		- [x] load preamble and postamble from files
 	- [x] HTML
 		- [x] minimal
 		- [ ] Automatically compute the number or days/hours of the seminar
@@ -67,5 +67,7 @@ TODO : Write a proper language specification
 		- [ ] Display the abstract next to the planning
 - [ ] Templating
 	- [ ] Add some real templating
+- [ ] Generate style settings programmatically
+    - [ ] Generate consistent color between backends
 - [x] Documentation
 - [x] Put clippy in giga chad mode

@@ -30,6 +30,7 @@ use crate::{
 };
 
 use clap::Parser;
+use passes::latex::TikzBackendOptions;
 use std::{fs, io::Read};
 use thiserror::Error;
 
@@ -80,10 +81,13 @@ enum Format {
 impl PassInput for &str {}
 impl PassInput for Vec<Event> {}
 
-fn generate_tikz(content: &str) -> Result<String, TikzBackendCompilationError> {
+fn generate_tikz(
+    options: TikzBackendOptions,
+    content: &str,
+) -> Result<String, TikzBackendCompilationError> {
     content
         .chain_pass::<ParseTimetable>()?
-        .chain_pass::<TikzBackend>()
+        .chain_pass_with::<TikzBackend, TikzBackendOptions>(options)
 }
 
 fn generate_html(
@@ -128,13 +132,21 @@ fn main() {
         |filepath| fs::read_to_string(filepath).expect("Could not read file"),
     );
 
-    let html_opts = HTMLBackendOptions {
-        template_path: template,
-    };
-
     let output: Result<String, CompilerError> = match args.format {
-        Format::Tikz => generate_tikz(&content).map_err(CompilerError::from),
-        Format::HTML => generate_html(html_opts, &content).map_err(CompilerError::from),
+        Format::Tikz => generate_tikz(
+            TikzBackendOptions {
+                template_path: template,
+            },
+            &content,
+        )
+        .map_err(CompilerError::from),
+        Format::HTML => generate_html(
+            HTMLBackendOptions {
+                template_path: template,
+            },
+            &content,
+        )
+        .map_err(CompilerError::from),
     };
 
     match output {

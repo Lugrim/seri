@@ -1,0 +1,56 @@
+\documentclass{standalone}
+\usepackage{tikz}
+
+\begin{document}
+
+% These set the width of a day and the height of an hour.
+\newcommand*\daywidth{6cm}
+\newcommand*\hourheight{4em}
+
+% The entry style will have two options:
+% * the first option sets how many hours the entry will be (i.e. its height);
+% * the second option sets how many overlapping entries there are (thus
+%   determining the width).
+\tikzset{entry/.style 2 args={
+    xshift=(0.5334em+0.8pt)/2,
+    draw,
+    line width=0.8pt,
+    font=\sffamily,
+    rectangle,
+    rounded corners,
+    fill=blue!20,
+    anchor=north west,
+    inner sep=0.3333em,
+    text width={\daywidth/#2-1.2em-1.6pt},
+    minimum height=#1*\hourheight,
+    align=center
+}}
+
+\tikzset{talk/.style 2 args={
+		entry={#1}{#2},
+		fill=red!40
+	}
+}
+
+\tikzset{meal/.style 2 args={
+		entry={#1}{#2},
+		fill=green!40
+	}
+}
+
+\tikzset{fun/.style 2 args={
+		entry={#1}{#2},
+		fill=blue!40
+	}
+}
+
+\tikzset{transport/.style 2 args={
+		entry={#1}{#2},
+		fill=gray!20
+	}
+}
+
+\begin{tikzpicture}[y=-\hourheight,x=\daywidth]
+{{ CALENDAR }}
+\end{tikzpicture}
+\end{document}

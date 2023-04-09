@@ -13,11 +13,17 @@ use crate::{
 /// Backend outputing events to a standalone LaTeX document containing a Tikz timetable
 pub struct TikzBackend {}
 
+/// Options for the HTML backend
+pub struct TikzBackendOptions {
+    /// Path to the template file. If not set, the default template (`data/template_tikz.tex`) will be used.
+    pub template_path: Option<String>,
+}
+
 /// Error occuring when compiling an event list to tikz.
 #[derive(Debug, Error)]
 pub enum TikzBackendCompilationError {
-    /// The event could not be parsed.
     #[error(transparent)]
+    /// The event could not be parsed.
     CouldNotParseEvent(#[from] <Event as FromStr>::Err),
     #[error("no event was provided")]
     /// The list of events was empty.
@@ -25,67 +31,18 @@ pub enum TikzBackendCompilationError {
     #[error(transparent)]
     /// The datetime of either the first day or last day of the bounding box is not valid.
     InvalidDatetime(#[from] InvalidDatetime),
+    /// An error occurred while trying to read the template file
+    #[error("Error while trying to read the template file: {0}")]
+    CouldNotReadTemplate(#[from] std::io::Error),
 }
 
-// TODO Load this string from file or config
-// TODO Programmatically generate formats (tikzset)?
-const LATEX_INTRO: &str = r"\documentclass{standalone}
-\usepackage{tikz}
-
-\begin{document}
-
-% These set the width of a day and the height of an hour.
-\newcommand*\daywidth{6cm}
-\newcommand*\hourheight{4em}
-
-% The entry style will have two options:
-% * the first option sets how many hours the entry will be (i.e. its height);
-% * the second option sets how many overlapping entries there are (thus
-%   determining the width).
-\tikzset{entry/.style 2 args={
-    xshift=(0.5334em+0.8pt)/2,
-    draw,
-    line width=0.8pt,
-    font=\sffamily,
-    rectangle,
-    rounded corners,
-    fill=blue!20,
-    anchor=north west,
-    inner sep=0.3333em,
-    text width={\daywidth/#2-1.2em-1.6pt},
-    minimum height=#1*\hourheight,
-    align=center
-}}
-
-\tikzset{talk/.style 2 args={
-		entry={#1}{#2},
-		fill=red!40
-	}
+#[allow(clippy::option_if_let_else)]
+fn get_template(template_path: Option<String>) -> Result<String, std::io::Error> {
+    match template_path {
+        None => Ok(include_str!("../../data/template_tikz.tex").to_string()),
+        Some(path) => std::fs::read_to_string(path),
+    }
 }
-
-\tikzset{meal/.style 2 args={
-		entry={#1}{#2},
-		fill=green!40
-	}
-}
-
-\tikzset{fun/.style 2 args={
-		entry={#1}{#2},
-		fill=blue!40
-	}
-}
-
-\tikzset{transport/.style 2 args={
-		entry={#1}{#2},
-		fill=gray!20
-	}
-}
-
-% Start the picture and set the x coordinate to correspond to days and the y
-% coordinate to correspond to hours (y should point downwards).
-\begin{tikzpicture}[y=-\hourheight,x=\daywidth]
-
-    % First print a list of times.";
 
 fn speaker_string(e: &Event) -> String {
     match e.speakers.len() {
@@ -184,35 +141,51 @@ fn generate_date_headers(first_hour: u32, day_count: u32, up_left: DateTime<Loca
     r
 }
 
-fn generate_postamble() -> String {
-    r"
-\end{tikzpicture}
-\end{document}"
-        .to_owned()
-}
-
 impl CompilingPass<Vec<Event>> for TikzBackend {
     type Residual = String;
     type Error = TikzBackendCompilationError;
 
-    // TODO: Split this huge function into smaller ones.
+    fn apply(events: Vec<Event>) -> Result<Self::Residual, Self::Error> {
+        Self::apply_with(
+            events,
+            TikzBackendOptions {
+                template_path: None,
+            },
+        )
+    }
+}
+
+impl CompilingPass<Vec<Event>, TikzBackendOptions> for TikzBackend {
+    type Residual = String;
+    type Error = TikzBackendCompilationError;
+
+    fn apply(events: Vec<Event>) -> Result<Self::Residual, Self::Error> {
+        Self::apply_with(
+            events,
+            TikzBackendOptions {
+                template_path: None,
+            },
+        )
+    }
+
+    // TODO Programmatically generate formats (tikzset)?
     #[allow(clippy::cast_possible_truncation)]
     #[allow(clippy::cast_sign_loss)]
-    fn apply(events: Vec<Event>) -> Result<Self::Residual, Self::Error> {
+    fn apply_with(
+        events: Vec<Event>,
+        options: TikzBackendOptions,
+    ) -> Result<Self::Residual, Self::Error> {
+        let template = get_template(options.template_path)?;
         // Get the bounding box to adjust the timetable shown (hours and days)
         let bb = find_bounding_box(&events).ok_or(TikzBackendCompilationError::NoEventProvided)?;
 
         let first_hour = bb.up_left.hour();
 
-        // TODO Do not add 1 if the hour is an integer
         let last_hour = bb.down_right.hour() + u32::from(bb.down_right.minute() != 0);
 
         let day_count = ((bb.last_day()? - bb.first_day()?).num_days() + 1) as u32;
 
-        // Create the return string
-        let mut r: String = LATEX_INTRO.to_owned();
-
-        r += &generate_hour_marks(first_hour, last_hour);
+        let mut r = generate_hour_marks(first_hour, last_hour);
         r += &generate_hour_dividers(first_hour, last_hour, day_count);
 
         r += &generate_day_dividers(first_hour, last_hour, day_count);
@@ -223,8 +196,6 @@ impl CompilingPass<Vec<Event>> for TikzBackend {
             r += &generate_tikz_node(&e, bb.up_left.day());
         }
 
-        r += &generate_postamble();
-
-        Ok(r)
+        Ok(template.replace("{{ CALENDAR }}", &r))
     }
 }
