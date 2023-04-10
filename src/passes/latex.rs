@@ -22,14 +22,14 @@ pub struct TikzBackendOptions {
 /// Error occuring when compiling an event list to tikz.
 #[derive(Debug, Error)]
 pub enum TikzBackendCompilationError {
-    #[error(transparent)]
     /// The event could not be parsed.
-    CouldNotParseEvent(#[from] <Event as FromStr>::Err),
-    #[error("no event was provided")]
-    /// The list of events was empty.
-    NoEventProvided,
     #[error(transparent)]
+    CouldNotParseEvent(#[from] <Event as FromStr>::Err),
+    /// The list of events was empty.
+    #[error("no event was provided")]
+    NoEventProvided,
     /// The datetime of either the first day or last day of the bounding box is not valid.
+    #[error(transparent)]
     InvalidDatetime(#[from] InvalidDatetime),
     /// An error occurred while trying to read the template file
     #[error("Error while trying to read the template file: {0}")]
@@ -44,7 +44,10 @@ fn get_template(template_path: Option<String>) -> Result<String, std::io::Error>
     }
 }
 
-fn speaker_string(e: &Event) -> String {
+/// Generate the text content of an event in the calendar.
+/// For now, if speakers of an event are given, will print the first one (eventually succeeded by
+/// `et~al.` if there are more) or the title, eventually truncated to 25 characters
+fn event_short_text(e: &Event) -> String {
     match e.speakers.len() {
         0 => {
             let (short, overflow) = e.title.split_at(std::cmp::min(25, e.title.len()));
@@ -56,72 +59,75 @@ fn speaker_string(e: &Event) -> String {
     }
 }
 
-fn generate_foreach_hour(first_hour: u32, last_hour: u32) -> String {
+/// Generate a \foreach macro to iterate over each hour of the calendar
+fn foreach_hour(first_hour: u32, last_hour: u32) -> String {
     r"
     \foreach \time   [evaluate=\time] in "
         .to_owned()
         + &format!("{{{first_hour},...,{last_hour}}}")
 }
-fn generate_hour_dividers(first_hour: u32, last_hour: u32, day_count: u32) -> String {
+
+/// Generate horizontal line on each hour of `day count` width
+fn hour_dividers(first_hour: u32, last_hour: u32, day_count: u32) -> String {
     // Draw the horizontal dividers on hours
-    generate_foreach_hour(first_hour, last_hour)
+    foreach_hour(first_hour, last_hour)
         + r"
         \draw (1,\time) -- ("
         + &format!("{}", day_count + 1)
         + r", \time);"
 }
 
-fn generate_hour_marks(first_hour: u32, last_hour: u32) -> String {
+/// Generate hour marks "hh:00" for each hour
+fn hour_marks(first_hour: u32, last_hour: u32) -> String {
     // For each hour, write it on the left
-    generate_foreach_hour(first_hour, last_hour)
+    foreach_hour(first_hour, last_hour)
         + r"
             \node[anchor=east] at (1,\time) {\time:00};"
 }
 
-fn generate_tikz_node(e: &Event, up_left_day: u32) -> String {
-    let mut r = r"\node[".to_owned();
-    // declare the event type for the format
-    r += &format!("{}", e.event_type);
-    r += "={";
-    // Compute event length as an hour fraction (block height)
-    r += &format!("{:.2}", f64::from(e.duration) / 60.);
-    r += "}{";
-    r += "1"; // TODO Compute simultaneous event count
-    r += "}] at (";
-    // Compute beginning day number (x position)
-    r += &format!("{}", e.start_date.day() - up_left_day + 1);
-    r += ",";
-    // Compute beginning hour (y position)
-    r += &format!(
-        "{}.{:.2}",
-        e.start_date.format("%H"),
-        e.start_date.minute() * 5 / 3
-    );
-    r += ") {";
-    // Create the string to fill up the event block
-    r += &speaker_string(e);
-    r += "};";
-    r
+/// Generate a tikz node in the calendar for a given event
+fn tikz_node(e: &Event, up_left_day: u32) -> String {
+    r"\node[".to_owned()
+        // declare the event type for the format
+        + &format!("{}", e.event_type)
+        + "={"
+        // Compute event length as an hour fraction (block height)
+        + &format!("{:.2}", f64::from(e.duration) / 60.)
+        + "}{"
+        + "1" // TODO Compute simultaneous event count
+        + "}] at ("
+        // Compute beginning day number (x position)
+        + &format!("{}", e.start_date.day() - up_left_day + 1)
+        + ","
+        // Compute beginning hour (y position)
+        + &format!(
+            "{}.{:.2}",
+            e.start_date.format("%H"),
+            e.start_date.minute() * 5 / 3
+        )
+        + ") {"
+        // Create the string to fill up the event block
+        + &event_short_text(e)
+        + "};"
 }
 
-fn generate_day_dividers(first_hour: u32, last_hour: u32, day_count: u32) -> String {
-    // Draw the vertical dividers between days
-    let mut r = r"
+/// Draw the vertical dividers between days
+fn day_dividers(first_hour: u32, last_hour: u32, day_count: u32) -> String {
+    r"
     % Draw some day dividers.
     \foreach \day   [evaluate=\day] in "
-        .to_owned();
-    r += &format!("{{1,...,{}}}", day_count + 1);
-
-    r += r"
-        \draw (\day,";
-    r += &format!("{}", first_hour - 1);
-    r += r") -- (\day,";
-    r += &format!("{last_hour}");
-    r += ");";
-    r
+        .to_owned()
+        + &format!("{{1,...,{}}}", day_count + 1)
+        + r"
+            \draw (\day,"
+        + &format!("{}", first_hour - 1)
+        + r") -- (\day,"
+        + &format!("{last_hour}")
+        + ");"
 }
 
-fn generate_date_headers(first_hour: u32, day_count: u32, up_left: DateTime<Local>) -> String {
+/// Generate the date headers at the top of the columns
+fn date_headers(first_hour: u32, day_count: u32, up_left: DateTime<Local>) -> String {
     let mut r = String::new();
     // Display the date headers
     for i in 0..day_count {
@@ -136,7 +142,7 @@ fn generate_date_headers(first_hour: u32, day_count: u32, up_left: DateTime<Loca
             "{}",
             (up_left + Duration::days(i64::from(i))).format("%A, %B %e")
         );
-        r += r"};";
+        r += "};";
     }
     r
 }
@@ -185,15 +191,15 @@ impl CompilingPass<Vec<Event>, TikzBackendOptions> for TikzBackend {
 
         let day_count = ((bb.last_day()? - bb.first_day()?).num_days() + 1) as u32;
 
-        let mut r = generate_hour_marks(first_hour, last_hour);
-        r += &generate_hour_dividers(first_hour, last_hour, day_count);
+        let mut r = hour_marks(first_hour, last_hour);
+        r += &hour_dividers(first_hour, last_hour, day_count);
 
-        r += &generate_day_dividers(first_hour, last_hour, day_count);
-        r += &generate_date_headers(first_hour, day_count, bb.up_left);
+        r += &day_dividers(first_hour, last_hour, day_count);
+        r += &date_headers(first_hour, day_count, bb.up_left);
 
         // Display all our event nodes
         for e in events {
-            r += &generate_tikz_node(&e, bb.up_left.day());
+            r += &tikz_node(&e, bb.up_left.day());
         }
 
         Ok(template.replace("{{ CALENDAR }}", &r))
