@@ -230,6 +230,27 @@ impl BoundingBox {
             .ok_or(InvalidDatetime)
     }
 
+    fn boundary(
+        order: std::cmp::Ordering,
+        first: &DateTime<Local>,
+        second: &DateTime<Local>,
+    ) -> Option<DateTime<Local>> {
+        let mut res = *first;
+
+        if second.time().cmp(&first.time()) == order {
+            res = res.with_hour(second.hour())?.with_minute(second.minute())?;
+        }
+
+        if second.date_naive().cmp(&first.date_naive()) == order {
+            res = res
+                .with_day(second.day())?
+                .with_month(second.month())?
+                .with_year(second.year())?;
+        }
+
+        Some(res)
+    }
+
     /// Create a datetime that represent the day of the earlier of both datetimes and at the time of
     /// day of the earlier of them.
     ///
@@ -238,24 +259,11 @@ impl BoundingBox {
     /// If first is the November, 06 at 9:00 and the second is November, 08 at 8:00, the result is
     /// the November, 06 at 8:00.
     #[must_use]
-    pub fn most_top_left(
+    pub fn top_left_boundary(
         first: &DateTime<Local>,
         second: &DateTime<Local>,
     ) -> Option<DateTime<Local>> {
-        let mut res = *first;
-
-        if second.time() < first.time() {
-            res = res.with_hour(second.hour())?.with_minute(second.minute())?;
-        }
-
-        if second.date_naive() < first.date_naive() {
-            res = res
-                .with_day(second.day())?
-                .with_month(second.month())?
-                .with_year(second.year())?;
-        }
-
-        Some(res)
+        Self::boundary(std::cmp::Ordering::Less, first, second)
     }
 
     /// Create a datetime that represent the day of the later of both datetimes and at the time of
@@ -266,24 +274,11 @@ impl BoundingBox {
     /// If first is the November, 06 at 9:00 and the second is November, 08 at 8:00, the result is
     /// the November, 08 at 9:00.
     #[must_use]
-    pub fn most_bottom_right(
+    pub fn bottom_right_boundary(
         first: &DateTime<Local>,
         second: &DateTime<Local>,
     ) -> Option<DateTime<Local>> {
-        let mut res = *first;
-
-        if first.time() < second.time() {
-            res = res.with_hour(second.hour())?.with_minute(second.minute())?;
-        }
-
-        if first.date_naive() < second.date_naive() {
-            res = res
-                .with_day(second.day())?
-                .with_month(second.month())?
-                .with_year(second.year())?;
-        }
-
-        Some(res)
+        Self::boundary(std::cmp::Ordering::Greater, first, second)
     }
 }
 
@@ -298,8 +293,8 @@ pub fn find_bounding_box(events: &Vec<Event>) -> Option<BoundingBox> {
     for e in events {
         let end_of_event = e.start_date + Duration::minutes(i64::from(e.duration));
 
-        up_left = BoundingBox::most_top_left(&up_left, &e.start_date)?;
-        down_right = BoundingBox::most_bottom_right(&down_right, &end_of_event)?;
+        up_left = BoundingBox::top_left_boundary(&up_left, &e.start_date)?;
+        down_right = BoundingBox::bottom_right_boundary(&down_right, &end_of_event)?;
     }
 
     Some(BoundingBox {
