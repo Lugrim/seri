@@ -172,7 +172,8 @@ impl FromStr for Event {
                     .map_err(|err| ParsingError::CouldNotParseDuration { source: err })
             })?;
         let speakers = settings.get("speakers").map_or_else(Vec::new, |l| {
-            l.split(',')
+            l.replace(['[', ']'], "")
+                .split(',')
                 .map(|s| s.trim().to_owned())
                 .filter(|s| !s.is_empty())
                 .collect()
