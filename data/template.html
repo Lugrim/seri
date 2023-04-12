@@ -1,63 +1,107 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>My template</title>
+    <title>My Seminar</title>
     <style>
       body {
         display: flex;
         align-items: center;
         justify-content: center;
         flex-direction: column;
-
-      }
-
-      table {
-        width: 100%;
-        max-width: 50rem;
-        font-family: -system-ui, -apple-system, BlinkMacSystemFont, sans-serif;
-      }
-
-      th {
-        font-weight: normal;
-        border-top: thin dotted #ccc;
-      }
-
-      td {
-        font-size: 0.8rem;
-        font-weight: bold;
-        line-height: 1.4;
-        border-radius: 0.2rem;
-        transition: opacity 0.3s ease;
-        width: 40%;
-      }
-
-      td > span {
-        font-size: 0.8em;
-        font-weight: normal;
-        display: block;
-        width: 100%;
+        font-family: "Source Sans Pro";
+        font-size: large;
       }
 
       .meal {
-        background-color: #ffa726;
       }
       .fun {
-        background-color: #9ccc65;
       }
+
       .talk {
-        background-color: #ff8a65;
       }
+
+      .event {
+        color: #3a3b3d;
+        border: 2px solid #696969;
+        padding: 1em;
+        font-size: 25pt;
+      }
+
+      .event:hover {
+        background-color: #e33729;
+        border-color: #e33729;
+        color: white;
+      }
+
       .other {
         background-color: #b3e5fc;
       }
 
-      .light {
-        color: #ccc;
-        font-weight: normal;
+      .day {
+        display: inline-block;
+        width: 90%;
+        min-width: 180px;
+        margin-left: 3%;
+        margin-right: 3%;
+        vertical-align: top;
+      }
+
+      .title:hover {
+        color: white;
+      }
+
+      .title {
+        font-size: x-large;
+      }
+
+      .abstract {
+        text-align: left;
+        display: none;
+        font-size: large;
+      }
+
+      .calendar {
+        text-align: center;
+        display: inline-block;
+        width: 100%;
+      }
+
+      @media only screen and (min-width: 1200px) {
+        .calendar {
+          width: 60%;
+        }
+
+        .day {
+          width: 40%;
+        }
       }
     </style>
+    <script type="text/javascript">
+      function setup_collapsible() {
+        var coll = document.getElementsByClassName("event");
+        var i;
+        for (i = 0; i < coll.length; i++) {
+          let abstracts = coll[i].getElementsByClassName("abstract");
+          if (abstracts.length > 0) {
+            coll[i].addEventListener("click", function () {
+              this.style.height = "auto";
+              let abstracts = this.getElementsByClassName("abstract");
+              for (let i = 0; i < abstracts.length; i++)
+                if (abstracts[i].style.display == "none") {
+                  abstracts[i].style.display = "block";
+                } else {
+                  abstracts[i].style.display = "none";
+                }
+            });
+          }
+        }
+      }
+      window.onload = setup_collapsible;
+    </script>
   </head>
   <body>
-    {{ CALENDAR }}
+    <h2>My Seminar</h2>
+    Click on the events to display their description
+    <div class="calendar">{{ CALENDAR }}</div>
   </body>
 </html>
