@@ -2,6 +2,7 @@
 
 pub mod html;
 pub mod latex;
+pub mod latexmk;
 pub mod parser;
 
 /// A trait defining compilation passes
