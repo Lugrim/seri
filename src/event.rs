@@ -230,6 +230,13 @@ impl BoundingBox {
             .ok_or(InvalidDatetime)
     }
 
+    /// Get how many days the event is lasting
+    #[must_use]
+    pub fn nb_days(&self) -> u32{
+        let duration = self.down_right.day() - self.up_left.day();
+        duration + 1
+    }
+
     fn boundary(
         order: std::cmp::Ordering,
         first: &DateTime<Local>,
@@ -301,4 +308,27 @@ pub fn find_bounding_box(events: &Vec<Event>) -> Option<BoundingBox> {
         up_left,
         down_right,
     })
+}
+
+#[cfg(test)]
+fn create_empty_datetime() -> DateTime<Local> {
+    NaiveDate::from_ymd_opt(0, 1, 1).unwrap().and_hms_opt(0, 0, 0).unwrap().and_local_timezone(Local).unwrap()
+}
+#[test]
+fn test_number_days() {
+    // Test for an event on the same day (0h->18h)
+    let dur = create_empty_datetime().with_hour(18).unwrap();
+    let bb = BoundingBox {
+        down_right: dur,
+        up_left: create_empty_datetime()
+    };
+    assert!(bb.nb_days() == 1);
+
+    // Test for an event spanning on two days (1 January 0h -> 2 January 18h)
+    let dur = create_empty_datetime().with_day(2).unwrap().with_hour(18).unwrap();
+    let bb = BoundingBox {
+        down_right: dur,
+        up_left: create_empty_datetime()
+    };
+    assert!(bb.nb_days() == 2);
 }
