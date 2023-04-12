@@ -1,4 +1,4 @@
-//! Latex frontends
+//! Latex backends
 
 use std::str::FromStr;
 
@@ -10,16 +10,16 @@ use crate::{
     passes::CompilingPass,
 };
 
-/// Backend outputing events to a standalone LaTeX document containing a Tikz timetable
+/// Backend outputing events to a standalone LaTeX document containing a `TikZ` timetable
 pub struct TikzBackend {}
 
-/// Options for the HTML backend
+/// Options for the `TikZ` backend
 pub struct TikzBackendOptions {
     /// Path to the template file. If not set, the default template (`data/template_tikz.tex`) will be used.
     pub template_path: Option<String>,
 }
 
-/// Error occuring when compiling an event list to tikz.
+/// Error occuring when compiling an event list to `TikZ`.
 #[derive(Debug, Error)]
 pub enum TikzBackendCompilationError {
     /// The event could not be parsed.
@@ -82,12 +82,13 @@ fn hour_marks(first_hour: u32, last_hour: u32) -> String {
     // For each hour, write it on the left
     foreach_hour(first_hour, last_hour)
         + r"
-            \node[anchor=east] at (1,\time) {\time:00};"
+        \node[anchor=east] at (1,\time) {\time:00};"
 }
 
 /// Generate a tikz node in the calendar for a given event
 fn tikz_node(e: &Event, up_left_day: u32) -> String {
-    r"\node[".to_owned()
+    r"
+    \node[".to_owned()
         // declare the event type for the format
         + &format!("{}", e.event_type)
         + "={"
@@ -119,7 +120,7 @@ fn day_dividers(first_hour: u32, last_hour: u32, day_count: u32) -> String {
         .to_owned()
         + &format!("{{1,...,{}}}", day_count + 1)
         + r"
-            \draw (\day,"
+        \draw (\day,"
         + &format!("{}", first_hour - 1)
         + r") -- (\day,"
         + &format!("{last_hour}")
@@ -133,7 +134,7 @@ fn date_headers(first_hour: u32, day_count: u32, up_left: DateTime<Local>) -> St
     for i in 0..day_count {
         let col = i + 1;
         r += r"
-        \node[anchor=south] at (";
+    \node[anchor=south] at (";
         r += &format!("{col}");
         r += r".5, ";
         r += &format!("{}", first_hour - 1);

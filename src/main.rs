@@ -1,17 +1,19 @@
 //! # `Seri`
-//! A Domain Specific Language Compiler for organising events and exporting details to different formats
+//! A Domain Specific Language Compiler for organizing events and exporting details to different formats
 
-// Make clippy quite nasty
+// Make Clippy quite nasty
 #![deny(clippy::cargo)] // Checks for garbage in the Cargo TOML files
 #![allow(clippy::multiple_crate_versions)] // Dependencies doing bad things
 #![deny(clippy::complexity)] // Checks for needlessly complex structures
 #![deny(clippy::correctness)] // Checks for common invalid usage and workarounds
 #![deny(clippy::nursery)] // Checks for things that are typically forgotten by learners
+#![allow(clippy::option_if_let_else)] // Always suggests to use map_or_else instead of match, which
+// is hard to read
 #![deny(clippy::pedantic)] // Checks for mildly annoying comments it could make about your code
 #![deny(clippy::perf)] // Checks for inefficient ways to perform common tasks
 #![deny(clippy::style)] // Checks for inefficient styling of code
-#![deny(clippy::suspicious)] // Checks for potentially malicious behaviour
-// Add some new clippy lints
+#![deny(clippy::suspicious)] // Checks for potentially malicious behavior
+// Add some new Clippy lints
 #![deny(clippy::use_self)] // Checks for the use of a struct's name in its `impl`
 // Add some default lints
 #![warn(unused_variables)] // Checks for unused variables
@@ -20,18 +22,23 @@
 #![warn(rustdoc::missing_crate_level_docs)]
 
 use crate::{
-    event::Event,
+    event::{Event, ParsingError},
     passes::{
         html::{HTMLBackend, HTMLBackendCompilationError, HTMLBackendOptions},
-        latex::{TikzBackend, TikzBackendCompilationError},
+        latex::{TikzBackend, TikzBackendCompilationError, TikzBackendOptions},
+        latexmk,
         parser::ParseTimetable,
         PassInput,
     },
 };
 
 use clap::Parser;
-use passes::latex::TikzBackendOptions;
-use std::{fs, io::Read};
+
+use std::{
+    fs,
+    io::{Read, Write},
+};
+
 use thiserror::Error;
 
 pub mod event;
@@ -40,15 +47,24 @@ pub mod passes;
 /// Help me to do something cleaner than this please
 #[derive(Debug, Error)]
 pub enum CompilerError {
-    /// An error occured in the HTML backend
+    /// An error occurred in the Parser
+    #[error("Error while trying to parse Seri input: {0}")]
+    CouldNotParseSeri(#[from] ParsingError),
+    /// An error occurred in the HTML backend
     #[error("Error while trying to generate the HTML output: {0}")]
     CouldNotGenerateHTML(#[from] HTMLBackendCompilationError),
-    /// An error occured in the Tikz backend
-    #[error("Error while trying to generate the Tikz output: {0}")]
+    /// An error occurred in the TikZ backend
+    #[error("Error while trying to generate the TikZ output: {0}")]
     CouldNotGenerateTikz(#[from] TikzBackendCompilationError),
+    /// An error occurred calling Latexmk
+    #[error("Error while trying to call Latexmk output: {0}")]
+    CouldNotCallLatexmk(#[from] latexmk::Error),
     /// The output format selected is not supported
     #[error("Backend not implemented yet: {0}")]
     BackendNotImplemented(String),
+    /// An error occurred writing to stdout
+    #[error("Error while trying to write output: {0}")]
+    CouldNotReadUtf8(#[from] std::io::Error),
 }
 
 /// Structure meant to store CLAP command line arguments
@@ -69,34 +85,54 @@ struct Args {
         help = "Output file. If not present, will output to stdout"
     )]
     output: Option<String>,
+    #[arg(short, long, help = "Keep intermediate files", default_value_t = false)]
+    save_tmp: bool,
 }
 
 #[derive(clap::ValueEnum, Clone, Debug)]
 #[allow(clippy::upper_case_acronyms)]
 enum Format {
     Tikz,
+    TikzPDF,
     HTML,
 }
 
 impl PassInput for &str {}
 impl PassInput for Vec<Event> {}
 
-fn generate_tikz(
-    options: TikzBackendOptions,
+fn generate_tikz_pdf(
     content: &str,
-) -> Result<String, TikzBackendCompilationError> {
+    tikz_options: TikzBackendOptions,
+    latexmk_options: latexmk::Options,
+) -> Result<Vec<u8>, CompilerError> {
+    content
+        .chain_pass::<ParseTimetable>()?
+        .chain_pass_with::<TikzBackend, TikzBackendOptions>(tikz_options)?
+        .chain_pass_with::<latexmk::Pass, latexmk::Options>(latexmk_options)
+        .map_err(CompilerError::from)
+}
+
+fn generate_tikz(options: TikzBackendOptions, content: &str) -> Result<Vec<u8>, CompilerError> {
     content
         .chain_pass::<ParseTimetable>()?
         .chain_pass_with::<TikzBackend, TikzBackendOptions>(options)
+        .map(String::into_bytes)
+        .map_err(CompilerError::from)
 }
 
-fn generate_html(
-    options: HTMLBackendOptions,
-    content: &str,
-) -> Result<String, HTMLBackendCompilationError> {
+fn generate_html(options: HTMLBackendOptions, content: &str) -> Result<Vec<u8>, CompilerError> {
     content
         .chain_pass::<ParseTimetable>()?
         .chain_pass_with::<HTMLBackend, HTMLBackendOptions>(options)
+        .map(String::into_bytes)
+        .map_err(CompilerError::from)
+}
+
+fn open_output_file(path: Option<String>) -> Result<fs::File, std::io::Error> {
+    match path {
+        Some(p) => fs::File::create(p),
+        None => todo!(),
+    }
 }
 
 /// Write the output to a file or to stdout
@@ -111,15 +147,11 @@ fn generate_html(
 /// * `Ok(())` if the output was written successfully
 /// * `Err(std::io::Error)` if the output could not be written
 ///
-fn write_output(output: &Option<String>, data: String) -> Result<(), std::io::Error> {
-    match output {
-        Some(file_path) => fs::write(file_path, data)?,
-        None => println!("{data}"),
-    }
-    Ok(())
+fn write_output(output: &mut fs::File, data: &[u8]) -> Result<(), std::io::Error> {
+    output.write_all(data)
 }
 
-fn main() {
+fn main() -> Result<(), CompilerError> {
     let args = Args::parse();
 
     let template = args.template.clone();
@@ -132,31 +164,33 @@ fn main() {
         |filepath| fs::read_to_string(filepath).expect("Could not read file"),
     );
 
-    let output: Result<String, CompilerError> = match args.format {
+    let mut outfile = open_output_file(args.output.clone())?;
+
+    let output = match args.format {
         Format::Tikz => generate_tikz(
             TikzBackendOptions {
                 template_path: template,
             },
             &content,
-        )
-        .map_err(CompilerError::from),
+        ),
+        Format::TikzPDF => generate_tikz_pdf(
+            &content,
+            TikzBackendOptions {
+                template_path: template,
+            },
+            latexmk::Options {
+                input_path: None,
+                output_path: args.output,
+                save_temps: args.save_tmp,
+            },
+        ),
         Format::HTML => generate_html(
             HTMLBackendOptions {
                 template_path: template,
             },
             &content,
-        )
-        .map_err(CompilerError::from),
-    };
+        ),
+    }?;
 
-    match output {
-        Ok(data) => write_output(&args.output, data).unwrap_or_else(|e| {
-            panic!(
-                "Couldn't write to file {}: {}",
-                &args.output.unwrap_or_else(|| "stdout".to_string()),
-                e
-            )
-        }),
-        Err(err) => eprintln!("{err}"),
-    }
+    write_output(&mut outfile, &output).map_err(CompilerError::from)
 }
