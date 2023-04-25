@@ -128,10 +128,10 @@ fn generate_html(options: HTMLBackendOptions, content: &str) -> Result<Vec<u8>, 
         .map_err(CompilerError::from)
 }
 
-fn open_output_file(path: Option<String>) -> Result<fs::File, std::io::Error> {
+fn open_output_file(path: Option<String>) -> Result<Box<dyn Write>, std::io::Error> {
     match path {
-        Some(p) => fs::File::create(p),
-        None => todo!(),
+        Some(p) => Ok(fs::File::create(p).map(Box::new)?),
+        None => Ok(Box::new(std::io::stdout())),
     }
 }
 
@@ -147,7 +147,7 @@ fn open_output_file(path: Option<String>) -> Result<fs::File, std::io::Error> {
 /// * `Ok(())` if the output was written successfully
 /// * `Err(std::io::Error)` if the output could not be written
 ///
-fn write_output(output: &mut fs::File, data: &[u8]) -> Result<(), std::io::Error> {
+fn write_output(output: &mut impl Write, data: &[u8]) -> Result<(), std::io::Error> {
     output.write_all(data)
 }
 
