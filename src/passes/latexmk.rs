@@ -1,6 +1,6 @@
 //! Will call eventually call Latexmk on a previous pass input
 
-use glob::glob;
+use glob::{glob, PatternError};
 use rand::Fill;
 use std::{
     fs,
@@ -31,6 +31,9 @@ pub enum Error {
     /// Error on temporary file creation
     #[error(transparent)]
     CouldNotCreateTempFile(#[from] TempFileCreationError),
+    /// Error while cleaning up
+    #[error(transparent)]
+    CouldNotCleanup(#[from] CleanupError),
 }
 
 /// Will call Latexmk with the `$pdflatex` target, if found on the system
@@ -86,16 +89,33 @@ pub fn random_valid_filename(len: usize) -> Result<PathBuf, TempFileCreationErro
     Ok(filepath)
 }
 
-// TODO Error management, get rid of unwraps
-fn cleanup(input_path: &Path) {
-    for entry in glob(input_path.with_extension("*").to_str().unwrap()).unwrap() {
+/// Error occurring when cleaning up temporary files
+#[derive(Debug, Error)]
+pub enum CleanupError {
+    /// Error returned when removing a file
+    #[error("Error while trying to remove file: {0}")]
+    CouldNotRemoveFile(#[from] std::io::Error),
+    /// Error returned while getting the path of files to cleanup
+    #[error("Error while converting a blob expression to &str")]
+    CouldNotGetPathToString,
+    /// Error returned from glob to get temporary files list
+    #[error("Error while trying to get the list of files to cleanup: {0}")]
+    CouldNotGetFileList(#[from] PatternError),
+}
+
+fn cleanup(input_path: &Path) -> Result<(), CleanupError> {
+    for entry in glob(
+        input_path
+            .with_extension("*")
+            .to_str()
+            .map_or_else(|| Err(CleanupError::CouldNotGetPathToString), Ok)?,
+    )? {
         let e = entry.unwrap();
         if e.is_file() {
-            if let Err(err) = fs::remove_file(e) {
-                eprintln!("[Warning] Could not delete temporary file: {err}");
-            }
+            fs::remove_file(e)?;
         }
     }
+    Ok(())
 }
 
 impl CompilingPass<&str, Options> for Pass {
@@ -110,16 +130,22 @@ impl CompilingPass<&str, Options> for Pass {
 
         fs::write(&input_unwrapped, latex)?;
 
-        let latexmk = Command::new("latexmk")
+        let mut latexmk = Command::new("latexmk")
             .arg("-pdflua")
             .arg(&input_unwrapped)
+            // TODO Will need a way to output that cleanly
+            .stdout(std::process::Stdio::null())
             .spawn()?;
 
-        latexmk.wait_with_output().expect("failed to wait on child");
+        latexmk.stdout.take();
+
+        latexmk.wait_with_output()?;
 
         let ret = fs::read(input_unwrapped.with_extension("pdf")).map_err(Error::from);
 
-        cleanup(&input_unwrapped);
+        if !options.save_temps {
+            cleanup(&input_unwrapped)?;
+        }
 
         ret
     }
