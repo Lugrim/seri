@@ -6,7 +6,7 @@ use chrono::{DateTime, Datelike, Duration, Local, Timelike};
 use thiserror::Error;
 
 use crate::{
-    event::{find_bounding_box, Event, InvalidDatetime},
+    event::{find_bounding_box, Event, InvalidDatetime, Type},
     passes::CompilingPass,
 };
 
@@ -44,18 +44,28 @@ fn get_template(template_path: Option<String>) -> Result<String, std::io::Error>
     }
 }
 
+/// Cut a text to be at most `length` characters
+fn cut_text(text: &str, length: usize) -> String {
+    if text.len() <= length {
+        text.to_owned()
+    } else {
+        let (short, _) = text.split_at(length - 3);
+        short.to_owned() + "..."
+    }
+}
+
 /// Generate the text content of an event in the calendar.
 /// For now, if speakers of an event are given, will print the first one (eventually succeeded by
 /// `et~al.` if there are more) or the title, eventually truncated to 25 characters
 fn event_short_text(e: &Event) -> String {
-    match e.speakers.len() {
-        0 => {
-            let (short, overflow) = e.title.split_at(std::cmp::min(25, e.title.len()));
-            let rest = if overflow.is_empty() { "" } else { "..." };
-            short.to_owned() + rest
-        }
-        1 => e.speakers[0].clone(),
-        _ => format!("{} et~al.", e.speakers[0]),
+    match e.event_type {
+        Type::Talk => match e.speakers.len() {
+            0 => cut_text(&e.title, 30),
+            1 => e.speakers[0].clone(),
+            2 => format!("{} and {}", e.speakers[0], e.speakers[1]),
+            _ => format!("{} et~al.", e.speakers[0]),
+        },
+        _ => cut_text(&e.title, 30),
     }
 }
 
