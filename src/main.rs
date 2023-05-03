@@ -43,6 +43,7 @@ use thiserror::Error;
 
 pub mod event;
 pub mod passes;
+pub mod templating;
 
 /// Help me to do something cleaner than this please
 #[derive(Debug, Error)]

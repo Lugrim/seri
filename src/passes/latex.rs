@@ -8,6 +8,7 @@ use thiserror::Error;
 use crate::{
     event::{find_bounding_box, Event, InvalidDatetime, Type},
     passes::CompilingPass,
+    templating::replace,
 };
 
 /// Backend outputing events to a standalone LaTeX document containing a `TikZ` timetable
@@ -213,6 +214,6 @@ impl CompilingPass<Vec<Event>, TikzBackendOptions> for TikzBackend {
             r += &tikz_node(&e, bb.up_left.day());
         }
 
-        Ok(template.replace("{{ CALENDAR }}", &r))
+        Ok(replace(&template, "CALENDAR", &r))
     }
 }

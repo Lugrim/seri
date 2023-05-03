@@ -2,6 +2,7 @@
 use crate::{
     event::{find_bounding_box, Event, InvalidDatetime},
     passes::CompilingPass,
+    templating::replace,
 };
 use chrono::{Datelike, Duration};
 use std::str::FromStr;
@@ -146,6 +147,6 @@ impl CompilingPass<Vec<Event>, HTMLBackendOptions> for HTMLBackend {
             }
             str += "</div>";
         }
-        Ok(template.replace("{{ CALENDAR }}", &str))
+        Ok(replace(&template, "CALENDAR", &str))
     }
 }
