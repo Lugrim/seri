@@ -22,7 +22,7 @@ pub fn validate_key(key: &str) -> bool {
 
 /// Replace each occurence of `{{ key }}` template string by the `replacement` in the `source`.
 /// If no key is found, will do nothing.
-/// 
+///
 /// For allowed key format, see [`validate_key`]
 ///
 /// # Errors
