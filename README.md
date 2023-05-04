@@ -28,46 +28,23 @@ Options:
   -f, --format <FORMAT>      Output format [default: tikz] [possible values: tikz, html]
   -t, --template <TEMPLATE>  Template to use, if any
   -o, --output <FILE>        Output file. If not present, will output to stdout
+  -s, --save-tmp             Keep intermediate files
   -h, --help                 Print help
   -V, --version              Print version
 ```
 
 ## Seri language
 
-TODO : Write a proper language specification
+See https://github.com/Lugrim/seri/issues/26
 
 ## TODO
 
-- [x] Refactor as a compiler structure
-	- [x] Refactor base code
-	- [x] Add passes chaining
-		- [x] Trait bound pass chaining (#3)
-		- [x] Find a cleaner way to define chaining (#5)
-	- [x] Stop being stupid and put frontend / backend in the right order
-- [x] Actually load data
-	- [x] From stdin
-	- [x] From file (CLAP)
-	- [x] I/O Error management (#1)
-- [ ] Enhance frontend
-	- [x] Parse more headers
-		- [x] speakers
-		- [x] timestamp
-		- [x] duration
-	- [ ] Parse description as markdown
+(To avoid duplicates, this section will be fully deleted soon, please use issues instead)
+
 - [ ] Add backends
-	- [x] tikz
-		- [x] minimal
-		- [x] Print day in header
-		- [x] load preamble and postamble from files
 	- [x] HTML
 		- [x] minimal
 		- [ ] Automatically compute the number or days/hours of the seminar
 		- [ ] Handle event not starting on round hours
 		- [ ] Display the date on top of the planning
 		- [ ] Display the abstract next to the planning
-- [ ] Templating
-	- [ ] Add some real templating
-- [ ] Generate style settings programmatically
-    - [ ] Generate consistent color between backends
-- [x] Documentation
-- [x] Put clippy in giga chad mode
