@@ -2,7 +2,7 @@
 use crate::{
     event::{find_bounding_box, Event, InvalidDatetime},
     passes::CompilingPass,
-    templating::replace,
+    templating::{replace, Error},
 };
 use chrono::{Datelike, Duration};
 use std::str::FromStr;
@@ -31,6 +31,9 @@ pub enum HTMLBackendCompilationError {
     /// An error occurred while trying to read the template file
     #[error("Error while trying to read the template file: {0}")]
     CouldNotReadTemplate(#[from] std::io::Error),
+    /// An error occurred while trying to replace text in the template
+    #[error("Error while trying to replace in template file: {0}")]
+    CouldNotReplaceTemplate(#[from] Error),
     /// The datetime of either the first day or last day of the bounding box is not valid.
     #[error(transparent)]
     InvalidDatetime(#[from] InvalidDatetime),

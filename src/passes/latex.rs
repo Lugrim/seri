@@ -8,7 +8,7 @@ use thiserror::Error;
 use crate::{
     event::{find_bounding_box, Event, InvalidDatetime, Type},
     passes::CompilingPass,
-    templating::replace,
+    templating::{replace, Error},
 };
 
 /// Backend outputing events to a standalone LaTeX document containing a `TikZ` timetable
@@ -35,6 +35,9 @@ pub enum TikzBackendCompilationError {
     /// An error occurred while trying to read the template file
     #[error("Error while trying to read the template file: {0}")]
     CouldNotReadTemplate(#[from] std::io::Error),
+    /// An error occurred while trying to replace text in the template
+    #[error("Error while trying to replace in template file: {0}")]
+    CouldNotReplaceTemplate(#[from] Error),
 }
 
 #[allow(clippy::option_if_let_else)]
@@ -214,6 +217,6 @@ impl CompilingPass<Vec<Event>, TikzBackendOptions> for TikzBackend {
             r += &tikz_node(&e, bb.up_left.day());
         }
 
-        Ok(replace(&template, "CALENDAR", &r))
+        Ok(replace(&template, "CALENDAR", &r)?)
     }
 }
