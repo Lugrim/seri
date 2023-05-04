@@ -1,9 +1,9 @@
 //! Compilation passes
 
 pub mod html;
-pub mod latex;
 pub mod latexmk;
 pub mod parser;
+pub mod tikz;
 
 /// A trait defining compilation passes
 /// Compilation passes should be chainable

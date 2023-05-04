@@ -25,10 +25,9 @@ use crate::{
     event::{Event, ParsingError},
     passes::{
         html::{HTMLBackend, HTMLBackendCompilationError, HTMLBackendOptions},
-        latex::{TikzBackend, TikzBackendCompilationError, TikzBackendOptions},
         latexmk,
         parser::ParseTimetable,
-        PassInput,
+        tikz, PassInput,
     },
 };
 
@@ -56,7 +55,7 @@ pub enum CompilerError {
     CouldNotGenerateHTML(#[from] HTMLBackendCompilationError),
     /// An error occurred in the TikZ backend
     #[error("Error while trying to generate the TikZ output: {0}")]
-    CouldNotGenerateTikz(#[from] TikzBackendCompilationError),
+    CouldNotGenerateTikz(#[from] tikz::Error),
     /// An error occurred calling Latexmk
     #[error("Error while trying to call Latexmk output: {0}")]
     CouldNotCallLatexmk(#[from] latexmk::Error),
@@ -103,20 +102,20 @@ impl PassInput for Vec<Event> {}
 
 fn generate_tikz_pdf(
     content: &str,
-    tikz_options: TikzBackendOptions,
+    tikz_options: tikz::Options,
     latexmk_options: latexmk::Options,
 ) -> Result<Vec<u8>, CompilerError> {
     content
         .chain_pass::<ParseTimetable>()?
-        .chain_pass_with::<TikzBackend, TikzBackendOptions>(tikz_options)?
+        .chain_pass_with::<tikz::Pass, tikz::Options>(tikz_options)?
         .chain_pass_with::<latexmk::Pass, latexmk::Options>(latexmk_options)
         .map_err(CompilerError::from)
 }
 
-fn generate_tikz(options: TikzBackendOptions, content: &str) -> Result<Vec<u8>, CompilerError> {
+fn generate_tikz(options: tikz::Options, content: &str) -> Result<Vec<u8>, CompilerError> {
     content
         .chain_pass::<ParseTimetable>()?
-        .chain_pass_with::<TikzBackend, TikzBackendOptions>(options)
+        .chain_pass_with::<tikz::Pass, tikz::Options>(options)
         .map(String::into_bytes)
         .map_err(CompilerError::from)
 }
@@ -169,14 +168,14 @@ fn main() -> Result<(), CompilerError> {
 
     let output = match args.format {
         Format::Tikz => generate_tikz(
-            TikzBackendOptions {
+            tikz::Options {
                 template_path: template,
             },
             &content,
         ),
         Format::TikzPDF => generate_tikz_pdf(
             &content,
-            TikzBackendOptions {
+            tikz::Options {
                 template_path: template,
             },
             latexmk::Options {
