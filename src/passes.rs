@@ -1,5 +1,6 @@
 //! Compilation passes
 
+pub mod abstex;
 pub mod html;
 pub mod latexmk;
 pub mod parser;

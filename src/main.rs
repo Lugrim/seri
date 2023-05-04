@@ -24,6 +24,7 @@
 use crate::{
     event::{Event, ParsingError},
     passes::{
+        abstex,
         html::{HTMLBackend, HTMLBackendCompilationError, HTMLBackendOptions},
         latexmk,
         parser::ParseTimetable,
@@ -53,6 +54,9 @@ pub enum CompilerError {
     /// An error occurred in the HTML backend
     #[error("Error while trying to generate the HTML output: {0}")]
     CouldNotGenerateHTML(#[from] HTMLBackendCompilationError),
+    /// An error occurred in the LaTeX abstracts backend
+    #[error("Error while trying to generate the LaTeX abstract output: {0}")]
+    CouldNotGenerateAbsTex(#[from] abstex::Error),
     /// An error occurred in the TikZ backend
     #[error("Error while trying to generate the TikZ output: {0}")]
     CouldNotGenerateTikz(#[from] tikz::Error),
@@ -94,11 +98,25 @@ struct Args {
 enum Format {
     Tikz,
     TikzPDF,
+    AbstractLatex,
+    AbstractPDF,
     HTML,
 }
 
 impl PassInput for &str {}
 impl PassInput for Vec<Event> {}
+
+fn generate_abstract_pdf(
+    content: &str,
+    abstex_options: abstex::Options,
+    latexmk_options: latexmk::Options,
+) -> Result<Vec<u8>, CompilerError> {
+    content
+        .chain_pass::<ParseTimetable>()?
+        .chain_pass_with::<abstex::Pass, abstex::Options>(abstex_options)?
+        .chain_pass_with::<latexmk::Pass, latexmk::Options>(latexmk_options)
+        .map_err(CompilerError::from)
+}
 
 fn generate_tikz_pdf(
     content: &str,
@@ -116,6 +134,14 @@ fn generate_tikz(options: tikz::Options, content: &str) -> Result<Vec<u8>, Compi
     content
         .chain_pass::<ParseTimetable>()?
         .chain_pass_with::<tikz::Pass, tikz::Options>(options)
+        .map(String::into_bytes)
+        .map_err(CompilerError::from)
+}
+
+fn generate_abstex(options: abstex::Options, content: &str) -> Result<Vec<u8>, CompilerError> {
+    content
+        .chain_pass::<ParseTimetable>()?
+        .chain_pass_with::<abstex::Pass, abstex::Options>(options)
         .map(String::into_bytes)
         .map_err(CompilerError::from)
 }
@@ -176,6 +202,23 @@ fn main() -> Result<(), CompilerError> {
         Format::TikzPDF => generate_tikz_pdf(
             &content,
             tikz::Options {
+                template_path: template,
+            },
+            latexmk::Options {
+                input_path: None,
+                output_path: args.output,
+                save_temps: args.save_tmp,
+            },
+        ),
+        Format::AbstractLatex => generate_abstex(
+            abstex::Options {
+                template_path: template,
+            },
+            &content,
+        ),
+        Format::AbstractPDF => generate_abstract_pdf(
+            &content,
+            abstex::Options {
                 template_path: template,
             },
             latexmk::Options {
