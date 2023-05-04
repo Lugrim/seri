@@ -55,8 +55,11 @@ impl ToHTML for Event {
         res += format!("<b>{}</b><br>", self.title).as_str();
         if !self.speakers.is_empty() {
             res += "<span>";
-            for speaker in &self.speakers {
+            for (i, speaker) in self.speakers.iter().enumerate() {
                 res.push_str(speaker.as_str());
+                if i != self.speakers.len() - 1 {
+                    res += ", ";
+                }
             }
             res += "</span>";
         }
