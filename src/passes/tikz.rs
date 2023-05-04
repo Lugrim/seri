@@ -3,26 +3,25 @@
 use std::str::FromStr;
 
 use chrono::{DateTime, Datelike, Duration, Local, Timelike};
-use thiserror::Error;
 
 use crate::{
     event::{find_bounding_box, Event, InvalidDatetime, Type},
     passes::CompilingPass,
-    templating::{replace, Error},
+    templating,
 };
 
 /// Backend outputing events to a standalone LaTeX document containing a `TikZ` timetable
-pub struct TikzBackend {}
+pub struct Pass {}
 
 /// Options for the `TikZ` backend
-pub struct TikzBackendOptions {
+pub struct Options {
     /// Path to the template file. If not set, the default template (`data/template_tikz.tex`) will be used.
     pub template_path: Option<String>,
 }
 
 /// Error occuring when compiling an event list to `TikZ`.
-#[derive(Debug, Error)]
-pub enum TikzBackendCompilationError {
+#[derive(Debug, thiserror::Error)]
+pub enum Error {
     /// The event could not be parsed.
     #[error(transparent)]
     CouldNotParseEvent(#[from] <Event as FromStr>::Err),
@@ -37,7 +36,7 @@ pub enum TikzBackendCompilationError {
     CouldNotReadTemplate(#[from] std::io::Error),
     /// An error occurred while trying to replace text in the template
     #[error("Error while trying to replace in template file: {0}")]
-    CouldNotReplaceTemplate(#[from] Error),
+    CouldNotReplaceTemplate(#[from] templating::Error),
 }
 
 #[allow(clippy::option_if_let_else)]
@@ -162,28 +161,28 @@ fn date_headers(first_hour: u32, day_count: u32, up_left: DateTime<Local>) -> St
     r
 }
 
-impl CompilingPass<Vec<Event>> for TikzBackend {
+impl CompilingPass<Vec<Event>> for Pass {
     type Residual = String;
-    type Error = TikzBackendCompilationError;
+    type Error = Error;
 
     fn apply(events: Vec<Event>) -> Result<Self::Residual, Self::Error> {
         Self::apply_with(
             events,
-            TikzBackendOptions {
+            Options {
                 template_path: None,
             },
         )
     }
 }
 
-impl CompilingPass<Vec<Event>, TikzBackendOptions> for TikzBackend {
+impl CompilingPass<Vec<Event>, Options> for Pass {
     type Residual = String;
-    type Error = TikzBackendCompilationError;
+    type Error = Error;
 
     fn apply(events: Vec<Event>) -> Result<Self::Residual, Self::Error> {
         Self::apply_with(
             events,
-            TikzBackendOptions {
+            Options {
                 template_path: None,
             },
         )
@@ -192,13 +191,10 @@ impl CompilingPass<Vec<Event>, TikzBackendOptions> for TikzBackend {
     // TODO Programmatically generate formats (tikzset)?
     #[allow(clippy::cast_possible_truncation)]
     #[allow(clippy::cast_sign_loss)]
-    fn apply_with(
-        events: Vec<Event>,
-        options: TikzBackendOptions,
-    ) -> Result<Self::Residual, Self::Error> {
+    fn apply_with(events: Vec<Event>, options: Options) -> Result<Self::Residual, Self::Error> {
         let template = get_template(options.template_path)?;
         // Get the bounding box to adjust the timetable shown (hours and days)
-        let bb = find_bounding_box(&events).ok_or(TikzBackendCompilationError::NoEventProvided)?;
+        let bb = find_bounding_box(&events).ok_or(Error::NoEventProvided)?;
 
         let first_hour = bb.up_left.hour();
 
@@ -217,6 +213,6 @@ impl CompilingPass<Vec<Event>, TikzBackendOptions> for TikzBackend {
             r += &tikz_node(&e, bb.up_left.day());
         }
 
-        Ok(replace(&template, "CALENDAR", &r)?)
+        Ok(templating::replace(&template, "CALENDAR", &r)?)
     }
 }
