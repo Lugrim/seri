@@ -65,8 +65,8 @@ impl ToHTML for Event {
         // Display the abstract of the event
         if let Some(description) = &self.description {
             res += format!(
-                "<div class=\"abstract\"><br>{}</div>",
-                description.replace('\n', "<br>")
+                "<div class=\"abstract\"><p>{}</p></div>",
+                description.replace("\n\n", "</p><p>")
             )
             .as_str();
         }
