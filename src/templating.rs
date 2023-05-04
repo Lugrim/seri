@@ -6,12 +6,24 @@ use thiserror::Error;
 /// An error in template engine used
 #[derive(Debug, Error)]
 pub enum Error {
+    /// The key contains disallowed characters
+    #[error("Your key should only contain alphanumeric characters, dots, and underscores")]
+    KeyNotAlphaNumeric,
     /// The template could not be replaced
-    #[error(transparent)]
-    CouldReplaceInTemplate(#[from] regex::Error),
+    #[error("Could not execute regex replacement in templates: {0}")]
+    TemplatingRegexError(#[from] regex::Error),
 }
 
-/// Replace the `{{ key }}` template string by the `replacement` in the `source`
+#[must_use]
+/// Will check if the key is valid. For now, checks it against regex `^[[:word:]]+$`
+pub fn validate_key(key: &str) -> bool {
+    Regex::new("^[[:word:]]+$").unwrap().is_match(key)
+}
+
+/// Replace each occurence of `{{ key }}` template string by the `replacement` in the `source`.
+/// If no key is found, will do nothing.
+/// 
+/// For allowed key format, see [`validate_key`]
 ///
 /// # Errors
 ///
@@ -20,7 +32,11 @@ pub enum Error {
 ///
 /// Known issue: the regex is injectable
 pub fn replace(source: &str, key: &str, replacement: &str) -> Result<String, Error> {
-    let expression = r"\{\{ *".to_owned() + key + r" *\}\}";
-    let re = Regex::new(&expression)?;
-    Ok(re.replace(source, NoExpand(replacement)).into_owned())
+    if validate_key(key) {
+        let expression = r"\{\{ *".to_owned() + key + r" *\}\}";
+        let re = Regex::new(&expression)?;
+        Ok(re.replace_all(source, NoExpand(replacement)).into_owned())
+    } else {
+        Err(Error::KeyNotAlphaNumeric)
+    }
 }

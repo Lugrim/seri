@@ -150,6 +150,6 @@ impl CompilingPass<Vec<Event>, HTMLBackendOptions> for HTMLBackend {
             }
             str += "</div>";
         }
-        Ok(replace(&template, "CALENDAR", &str))
+        Ok(replace(&template, "CALENDAR", &str)?)
     }
 }
