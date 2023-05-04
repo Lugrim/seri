@@ -4,7 +4,7 @@ use crate::{
     passes::CompilingPass,
 };
 use chrono::{Datelike, Duration};
-use std::{cmp::min, str::FromStr};
+use std::str::FromStr;
 use thiserror::Error;
 
 /// Backend outputing events to a standalone HTML document containing a timetable
@@ -52,8 +52,7 @@ impl ToHTML for Event {
 
         // Display the title and author of the event
         res += "<div class=\"title\">";
-        let (title, _) = self.title.split_at(min(self.title.len(), 25));
-        res += format!("<b>{title}</b><br>").as_str();
+        res += format!("<b>{}</b><br>", self.title).as_str();
         if !self.speakers.is_empty() {
             res += "<span>";
             for speaker in &self.speakers {
