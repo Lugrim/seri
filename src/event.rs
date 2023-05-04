@@ -8,7 +8,7 @@ use std::str::FromStr;
 use thiserror::Error;
 
 /// The type of a timetable event
-#[derive(Debug, PartialEq, Eq, Default)]
+#[derive(Debug, PartialEq, Eq, Default, Clone)]
 pub enum Type {
     /// A Talk by someone
     #[default]
@@ -56,7 +56,7 @@ impl fmt::Display for Type {
 }
 
 /// A timetable event
-#[derive(Debug)]
+#[derive(Debug, Clone)]
 pub struct Event {
     /// The type of the event
     pub event_type: Type,
@@ -179,12 +179,20 @@ impl FromStr for Event {
                 .collect()
         });
 
+        let mut nonempty_description: Option<String> = description
+            .map(|d| d.trim().into());
+        if let Some(d) = &nonempty_description {
+            if d.is_empty() {
+                nonempty_description = None;
+            }
+        }
+
         Ok(Self {
             event_type,
             start_date,
             duration,
             title: title.to_owned(),
-            description,
+            description: nonempty_description,
             speakers,
         })
     }
