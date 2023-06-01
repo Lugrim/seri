@@ -92,7 +92,7 @@
               this.style.height = "auto";
               let abstracts = this.getElementsByClassName("abstract");
               for (let i = 0; i < abstracts.length; i++)
-                if (abstracts[i].style.display == "none") {
+                if (abstracts[i].style.display != "block") {
                   abstracts[i].style.display = "block";
                 } else {
                   abstracts[i].style.display = "none";
