@@ -116,7 +116,7 @@ fn tikz_node(e: &Event, up_left_day: u32) -> String {
         + ","
         // Compute beginning hour (y position)
         + &format!(
-            "{}.{:.2}",
+            "{}.{:02}",
             e.start_date.format("%H"),
             e.start_date.minute() * 5 / 3
         )
