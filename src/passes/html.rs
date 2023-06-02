@@ -1,6 +1,6 @@
 //! HTML backend
 use crate::{
-    event::{find_bounding_box, Event, InvalidDatetime},
+    event::{find_bounding_box, Event, InvalidDatetime, Type},
     passes::CompilingPass,
     templating::{replace, Error},
 };
@@ -57,7 +57,7 @@ impl ToHTML for Event {
         // Display the title and author of the event
         res += "<div class=\"title\">";
         res += format!("<b>{}</b><br>", self.title).as_str();
-        if !self.speakers.is_empty() {
+        if self.event_type == Type::Talk && !self.speakers.is_empty()  {
             res += "<span>";
             for (i, speaker) in self.speakers.iter().enumerate() {
                 res.push_str(speaker.as_str());

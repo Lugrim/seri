@@ -20,9 +20,16 @@
         background-color: white;
       }
 
-      .event:hover {
+      .talk {
+      }
+
+      .talk:hover {
         background-color: #e33729;
         border-color: #e33729;
+        color: white;
+      }
+
+      .talk:hover .title {
         color: white;
       }
 
@@ -32,9 +39,6 @@
       .fun {
         color: #46494C;;
         background-color: #1985A1;
-      }
-
-      .talk {
       }
 
       .other {
@@ -49,10 +53,6 @@
         margin-right: 3%;
         vertical-align: top;
         background-color: white;
-      }
-
-      .title:hover {
-        color: white;
       }
 
       .title {
@@ -73,7 +73,7 @@
 
       @media only screen and (min-width: 1200px) {
         .calendar {
-          width: 60%;
+          width: 80%;
         }
 
         .day {
@@ -103,6 +103,7 @@
       }
       window.onload = setup_collapsible;
     </script>
+     <meta charset="UTF-8">
   </head>
   <body>
     <h2>My Seminar</h2>
