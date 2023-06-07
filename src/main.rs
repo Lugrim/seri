@@ -42,6 +42,7 @@ use std::{
 use thiserror::Error;
 
 pub mod event;
+mod lang;
 pub mod passes;
 pub mod templating;
 

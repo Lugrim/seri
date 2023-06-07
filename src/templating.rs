@@ -14,8 +14,12 @@ pub enum Error {
     TemplatingRegexError(#[from] regex::Error),
 }
 
-#[must_use]
 /// Will check if the key is valid. For now, checks it against regex `^[[:word:]]+$`
+///
+/// # Panics
+///
+/// Could panic if internal regex is wrong, it should never panic
+#[must_use]
 pub fn validate_key(key: &str) -> bool {
     Regex::new("^[[:word:]]+$").unwrap().is_match(key)
 }

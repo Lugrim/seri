@@ -6,6 +6,7 @@ use chrono::{DateTime, Days, Local};
 
 use crate::{
     event::{find_bounding_box, Event, InvalidDatetime, Type},
+    lang::Lang,
     passes::CompilingPass,
     templating,
 };
@@ -67,6 +68,7 @@ fn day_delimiter(day: &DateTime<Local>) -> String {
 
 fn talk_title(e: &Event) -> String {
     let mut r = r"\subsection{".to_owned();
+    r += &talk_language(e);
     r += &e.title;
     r += "}\n";
     r
@@ -75,12 +77,20 @@ fn talk_title(e: &Event) -> String {
 fn talk_subtitle(e: &Event) -> String {
     let mut r = r"\paragraph{} \textit{".to_owned();
     r += &format!("{}", e.start_date.time().format("%H:%M"));
-    if ! e.speakers.is_empty() {
+    if !e.speakers.is_empty() {
         r += &format!(" - {}", e.speakers.join(r", "));
-
     }
     r += "}\n";
     r
+}
+
+fn talk_language(e: &Event) -> String {
+    match e.language {
+        Some(Lang::French) => "\\emoji{flag-france} ",
+        Some(Lang::English) => "\\emoji{flag-united-kingdom} ",
+        None => "",
+    }
+    .to_owned()
 }
 
 impl CompilingPass<Vec<Event>, Options> for Pass {
@@ -120,7 +130,8 @@ impl CompilingPass<Vec<Event>, Options> for Pass {
                 Type::Talk | Type::Fun => {
                     r += &talk_title(&e);
                     r += &talk_subtitle(&e);
-                    r += &e.description
+                    r += &e
+                        .description
                         .map(|d| r"\paragraph{} ".to_owned() + &d)
                         .unwrap_or_default();
                     r += "\n\n";
