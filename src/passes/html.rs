@@ -1,6 +1,7 @@
 //! HTML backend
 use crate::{
     event::{find_bounding_box, Event, InvalidDatetime, Type},
+    lang::Lang,
     passes::CompilingPass,
     templating::{replace, Error},
 };
@@ -56,8 +57,14 @@ impl ToHTML for Event {
 
         // Display the title and author of the event
         res += "<div class=\"title\">";
-        res += format!("<b>{}</b><br>", self.title).as_str();
-        if self.event_type == Type::Talk && !self.speakers.is_empty()  {
+        res += format!(
+            "{}<b>{}</b><br>",
+            self.language
+                .map_or_else(String::new, |l| l.to_html() + " "),
+            self.title
+        )
+        .as_str();
+        if self.event_type == Type::Talk && !self.speakers.is_empty() {
             res += "<span>";
             for (i, speaker) in self.speakers.iter().enumerate() {
                 res.push_str(speaker.as_str());
@@ -80,6 +87,16 @@ impl ToHTML for Event {
         res += "</div>";
 
         res
+    }
+}
+
+impl ToHTML for Lang {
+    fn to_html(&self) -> String {
+        match self {
+            Self::French => "🇫🇷",
+            Self::English => "🇬🇧",
+        }
+        .to_owned()
     }
 }
 
