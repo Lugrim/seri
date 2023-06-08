@@ -75,6 +75,40 @@ pub struct Event {
     pub speakers: Vec<String>,
 }
 
+/// Cut a text to be at most `length` characters
+fn cut_text(text: &str, length: usize) -> String {
+    if text.len() <= length {
+        text.to_owned()
+    } else {
+        let (short, _) = text.split_at(length - 3);
+        short.to_owned() + "..."
+    }
+}
+
+impl Event {
+    /// Generate a short version of the title, up to `length` characters
+    #[must_use]
+    pub fn short_title(&self, length: usize) -> String {
+        cut_text(&self.title, length)
+    }
+
+    /// Generate the text content of an event in the calendar.
+    /// For now, if speakers of an event are given, will print the first one (eventually succeeded by
+    /// `et~al.` if there are more) or the title, eventually truncated to 25 characters
+    #[must_use]
+    pub fn short_text(&self) -> String {
+        match self.event_type {
+            Type::Talk => match self.speakers.len() {
+                0 => self.short_title(30),
+                1 => self.speakers[0].clone(),
+                2 => format!("{} and {}", self.speakers[0], self.speakers[1]),
+                _ => format!("{} et~al.", self.speakers[0]),
+            },
+            _ => self.short_title(30),
+        }
+    }
+}
+
 /// The line of configuration given by the user is not a valid "key:value" pair.
 #[derive(Debug, Error)]
 #[error("line `{0}` is not a valid field")]
