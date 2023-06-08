@@ -2,12 +2,11 @@
 
 use chrono::prelude::*;
 use chrono::{DateTime, Duration, Local};
+use isolang::Language;
 use std::collections::HashMap;
 use std::fmt;
 use std::str::FromStr;
 use thiserror::Error;
-
-use crate::lang::Lang;
 
 /// The type of a timetable event
 #[derive(Debug, PartialEq, Eq, Default, Clone)]
@@ -70,8 +69,8 @@ pub struct Event {
     pub duration: u32,
     /// The event description
     pub description: Option<String>,
-    /// Potentially the language of the talk
-    pub language: Option<Lang>,
+    /// The language of the talk
+    pub language: Option<Language>,
     /// The list of declared speakers
     pub speakers: Vec<String>,
 }
@@ -152,11 +151,7 @@ impl FromStr for Event {
                 Type::from_str(talk_type).map_err(ParsingError::from)
             })?;
 
-        let language = if let Some(lang) = settings.get("lang").as_ref() {
-            Lang::from_str(lang).ok()
-        } else {
-            None
-        };
+        let language = settings.get("lang").and_then(|l| Language::from_639_1(l));
 
         let title = settings.get("title").map_or("(no title)", |&e| e);
 
