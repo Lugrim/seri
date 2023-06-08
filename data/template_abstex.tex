@@ -3,7 +3,19 @@
 \usepackage[T1]{fontenc}
 \usepackage[utf8]{inputenc}
 
+\usepackage{iftex}
+\ifluatex
+% Emoji for custom bullets
 \usepackage{emoji}
+\fi
+
+\ifluatex
+\newcommand{\fra}{\emoji{flag-france} }
+\newcommand{\eng}{\emoji{flag-united-kingdom} }
+\else
+\newcommand{\fra}{[FR] }
+\newcommand{\eng}{[EN] }
+\fi
 
 \title{Seminar}
 \date{{{ BEGIN_DATE }} - {{ END_DATE }}}

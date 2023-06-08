@@ -1,11 +1,11 @@
 //! HTML backend
 use crate::{
     event::{find_bounding_box, Event, InvalidDatetime, Type},
-    lang::Lang,
     passes::CompilingPass,
     templating::{replace, Error},
 };
 use chrono::{Datelike, Duration};
+use isolang::Language;
 use std::str::FromStr;
 use thiserror::Error;
 
@@ -90,11 +90,12 @@ impl ToHTML for Event {
     }
 }
 
-impl ToHTML for Lang {
+impl ToHTML for Language {
     fn to_html(&self) -> String {
         match self {
-            Self::French => "🇫🇷",
-            Self::English => "🇬🇧",
+            Self::Fra => "🇫🇷",
+            Self::Eng => "🇬🇧",
+            _ => "?",
         }
         .to_owned()
     }

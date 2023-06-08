@@ -6,7 +6,6 @@ use chrono::{DateTime, Days, Local};
 
 use crate::{
     event::{find_bounding_box, Event, InvalidDatetime, Type},
-    lang::Lang,
     passes::CompilingPass,
     templating,
 };
@@ -85,12 +84,8 @@ fn talk_subtitle(e: &Event) -> String {
 }
 
 fn talk_language(e: &Event) -> String {
-    match e.language {
-        Some(Lang::French) => "\\emoji{flag-france} ",
-        Some(Lang::English) => "\\emoji{flag-united-kingdom} ",
-        None => "",
-    }
-    .to_owned()
+    e.language
+        .map_or_else(String::new, |l| "\\".to_owned() + l.to_639_3() + " ")
 }
 
 impl CompilingPass<Vec<Event>, Options> for Pass {
