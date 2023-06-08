@@ -92,6 +92,12 @@ impl Event {
         cut_text(&self.title, length)
     }
 
+    /// Generate a long version of all the speakers
+    #[must_use]
+    pub fn speakers_string(&self) -> String {
+        self.speakers.join(", ")
+    }
+
     /// Generate the text content of an event in the calendar.
     /// For now, if speakers of an event are given, will print the first one (eventually succeeded by
     /// `et~al.` if there are more) or the title, eventually truncated to 25 characters
