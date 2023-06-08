@@ -66,12 +66,7 @@ impl ToHTML for Event {
         .as_str();
         if self.event_type == Type::Talk && !self.speakers.is_empty() {
             res += "<span>";
-            for (i, speaker) in self.speakers.iter().enumerate() {
-                res.push_str(speaker.as_str());
-                if i != self.speakers.len() - 1 {
-                    res += ", ";
-                }
-            }
+            res += &self.speakers_string();
             res += "</span>";
         }
         res += "</div>\n";

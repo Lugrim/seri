@@ -77,7 +77,7 @@ fn talk_subtitle(e: &Event) -> String {
     let mut r = r"\paragraph{} \textit{".to_owned();
     r += &format!("{}", e.start_date.time().format("%H:%M"));
     if !e.speakers.is_empty() {
-        r += &format!(" - {}", e.speakers.join(r", "));
+        r += &format!(" - {}", e.speakers_string());
     }
     r += "}\n";
     r
