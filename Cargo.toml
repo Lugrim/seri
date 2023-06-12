@@ -9,7 +9,7 @@ authors = [
 	"Hugo Reymond",
 ]
 license = "ACSL"
-repository = "https://github.com/Lugrim/timetable-language"
+repository = "https://github.com/Lugrim/seri"
 description = "A Domain Specific Language Compiler for organising events and exporting details to different formats"
 categories = ["command-line-utilities", "compilers", "date-and-time"]
 keywords = ["timetable"]
