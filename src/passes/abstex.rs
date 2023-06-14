@@ -125,10 +125,8 @@ impl CompilingPass<Vec<Event>, Options> for Pass {
                 Type::Talk | Type::Fun => {
                     r += &talk_title(&e);
                     r += &talk_subtitle(&e);
-                    r += &e
-                        .description
-                        .map(|d| r"\paragraph{} ".to_owned() + &d)
-                        .unwrap_or_default();
+                    r += r"\paragraph{}";
+                    r += &e.description.to_string();
                     r += "\n\n";
                 }
                 _ => (),

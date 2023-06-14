@@ -314,6 +314,15 @@ dependencies = [
 ]
 
 [[package]]
+name = "markdown"
+version = "1.0.0-alpha.10"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "b1bd98c3b68451b0390a289c58c856adb4e2b50cc40507ce2a105d5b00eafc80"
+dependencies = [
+ "unicode-id",
+]
+
+[[package]]
 name = "memchr"
 version = "2.5.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -461,12 +470,13 @@ checksum = "9e8c8cf938e98f769bc164923b06dce91cea1751522f46f8466461af04c9027d"
 
 [[package]]
 name = "seri"
-version = "0.1.4"
+version = "0.2.0"
 dependencies = [
  "chrono",
  "clap",
  "glob",
  "isolang",
+ "markdown",
  "rand",
  "regex",
  "thiserror",
@@ -545,6 +555,12 @@ dependencies = [
  "wasi 0.10.0+wasi-snapshot-preview1",
  "winapi",
 ]
+
+[[package]]
+name = "unicode-id"
+version = "0.3.3"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "d70b6494226b36008c8366c288d77190b3fad2eb4c10533139c1c1f461127f1a"
 
 [[package]]
 name = "unicode-ident"

@@ -6,6 +6,7 @@ use crate::{
 };
 use chrono::{Datelike, Duration};
 use isolang::Language;
+use markdown::mdast::Node;
 use std::str::FromStr;
 use thiserror::Error;
 
@@ -72,13 +73,11 @@ impl ToHTML for Event {
         res += "</div>\n";
 
         // Display the abstract of the event
-        if let Some(description) = &self.description {
-            res += format!(
-                "<div class=\"abstract\"><p>{}</p></div>",
-                description.replace("\n\n", "</p><p>")
-            )
-            .as_str();
-        }
+        res += format!(
+            "<div class=\"abstract\"><p>{}</p></div>",
+            &self.description.to_html()
+        )
+        .as_str();
         res += "</div>";
 
         res
@@ -93,6 +92,190 @@ impl ToHTML for Language {
             _ => "?",
         }
         .to_owned()
+    }
+}
+
+impl ToHTML for Node {
+    fn to_html(&self) -> String {
+        use Node::*;
+
+        match &self {
+            Root(root) => root
+                .children
+                .iter()
+                .map(|e| e.to_html())
+                .collect::<Vec<String>>()
+                .join("\n"),
+            BlockQuote(blockquote) => {
+                "<blockquote>".to_owned()
+                    + &blockquote
+                        .children
+                        .iter()
+                        .map(|e| e.to_html())
+                        .collect::<Vec<String>>()
+                        .join("\n")
+                    + "</blockquote>"
+            }
+            List(list) => {
+                if list.ordered { "<ol>" } else { "<ul>" }.to_owned()
+                    + &list
+                        .children
+                        .iter()
+                        .map(|e| e.to_html())
+                        .collect::<Vec<String>>()
+                        .join("\n")
+                    + if list.ordered { "</ol>" } else { "</ul>" }
+            }
+            ListItem(listitem) => {
+                "<li>".to_owned()
+                    + &listitem
+                        .children
+                        .iter()
+                        .map(|e| e.to_html())
+                        .collect::<Vec<String>>()
+                        .join("\n")
+                    + "</li>"
+            }
+            Delete(delete) => {
+                "<del>".to_owned()
+                    + &delete
+                        .children
+                        .iter()
+                        .map(|e| e.to_html())
+                        .collect::<Vec<String>>()
+                        .join("\n")
+                    + "</del>"
+            }
+            Emphasis(emphasis) => {
+                "<em>".to_owned()
+                    + &emphasis
+                        .children
+                        .iter()
+                        .map(|e| e.to_html())
+                        .collect::<Vec<String>>()
+                        .join("\n")
+                    + "</em>"
+            }
+            Link(link) => {
+                "<a href=\"".to_owned()
+                    + &link.url
+                    + "\" title=\""
+                    + &link.title.clone().unwrap_or_default()
+                    + "\">"
+                    + &link
+                        .children
+                        .iter()
+                        .map(|e| e.to_html())
+                        .collect::<Vec<String>>()
+                        .join("\n")
+                    + "</a>"
+            }
+            Strong(strong) => "<b>".to_owned() +
+                &strong
+                .children
+                .iter()
+                .map(|e| e.to_html())
+                .collect::<Vec<String>>()
+                .join("\n")
+                + "</b>",
+            Heading(heading) => {
+                "<h".to_owned()
+                    + &heading.depth.to_string()
+                    + ">"
+                    + &heading
+                        .children
+                        .iter()
+                        .map(|e| e.to_html())
+                        .collect::<Vec<String>>()
+                        .join("\n")
+                    + "</h"
+                    + &heading.depth.to_string()
+                    + ">"
+            }
+            Table(table) => {
+                "<table>".to_owned()
+                    + &table
+                        .children
+                        .iter()
+                        .map(|e| e.to_html())
+                        .collect::<Vec<String>>()
+                        .join("\n")
+                    + "</table>"
+            }
+            TableRow(tablerow) => {
+                "<tr>".to_owned()
+                    + &tablerow
+                        .children
+                        .iter()
+                        .map(|e| e.to_html())
+                        .collect::<Vec<String>>()
+                        .join("\n")
+                    + "</tr>"
+            }
+            TableCell(tablecell) => {
+                "<td>".to_owned()
+                    + &tablecell
+                        .children
+                        .iter()
+                        .map(|e| e.to_html())
+                        .collect::<Vec<String>>()
+                        .join("\n")
+                    + "</td>"
+            }
+            Paragraph(paragraph) => {
+                "<p>".to_owned()
+                    + &paragraph
+                        .children
+                        .iter()
+                        .map(|e| e.to_html())
+                        .collect::<Vec<String>>()
+                        .join("\n")
+                    + "</p>"
+            }
+            InlineCode(inlinecode) => "<code>".to_owned() + &inlinecode.value + "</code>",
+            // TODO Use metadata
+            Code(code) => "<pre>".to_owned() + &code.value + "</pre>",
+            Text(text) => text.value.clone(),
+            // === TODO ===
+            FootnoteDefinition(footnotedefinition) => footnotedefinition
+                .children
+                .iter()
+                .map(|e| e.to_html())
+                .collect::<Vec<String>>()
+                .join("\n"),
+            MdxJsxFlowElement(mdxjsxflowelement) => mdxjsxflowelement
+                .children
+                .iter()
+                .map(|e| e.to_html())
+                .collect::<Vec<String>>()
+                .join("\n"),
+            MdxJsxTextElement(mdxjsxtextelement) => mdxjsxtextelement
+                .children
+                .iter()
+                .map(|e| e.to_html())
+                .collect::<Vec<String>>()
+                .join("\n"),
+            LinkReference(linkreference) => linkreference
+                .children
+                .iter()
+                .map(|e| e.to_html())
+                .collect::<Vec<String>>()
+                .join("\n"),
+            MdxjsEsm(mdxjsesm) => format!("{:?}", mdxjsesm),
+            Toml(toml) => format!("{:?}", toml),
+            Yaml(yaml) => format!("{:?}", yaml),
+            Break(brk) => format!("{:?}", brk),
+            InlineMath(inlinemath) => format!("{:?}", inlinemath),
+            MdxTextExpression(mdxtextexpression) => format!("{:?}", mdxtextexpression),
+            FootnoteReference(footnotereference) => format!("{:?}", footnotereference),
+            Html(html) => format!("{:?}", html),
+            Image(image) => format!("{:?}", image),
+            ImageReference(imagereference) => format!("{:?}", imagereference),
+            Math(math) => format!("{:?}", math),
+            MdxFlowExpression(mdxflowexpression) => format!("{:?}", mdxflowexpression),
+            ThematicBreak(thematicbreak) => format!("{:?}", thematicbreak),
+            Definition(definition) => format!("{:?}", definition),
+        }
     }
 }
 

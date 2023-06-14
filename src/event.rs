@@ -3,6 +3,8 @@
 use chrono::prelude::*;
 use chrono::{DateTime, Duration, Local};
 use isolang::Language;
+use markdown::mdast::Node;
+use markdown::{to_mdast, ParseOptions};
 use std::collections::HashMap;
 use std::fmt;
 use std::str::FromStr;
@@ -68,7 +70,7 @@ pub struct Event {
     /// The duration of the event (in minutes)
     pub duration: u32,
     /// The event description
-    pub description: Option<String>,
+    pub description: Node,
     /// The language of the talk
     pub language: Option<Language>,
     /// The list of declared speakers
@@ -82,11 +84,15 @@ fn cut_text(text: &str, length: usize) -> String {
     if text.clone().count() <= length {
         text.collect::<String>()
     } else {
-        if length > 3 { // If possible, take the exact given character count
+        if length > 3 {
+            // If possible, take the exact given character count
             text.take(length - 3)
-        } else { // Otherwise, take 3 characters more
+        } else {
+            // Otherwise, take 3 characters more
             text.take(length)
-        }.collect::<String>() + "..."
+        }
+        .collect::<String>()
+            + "..."
     }
 }
 
@@ -171,6 +177,10 @@ pub enum ParsingError {
     /// the given date does not respect the expected format.
     #[error("the give date `{0}` does not respect the expected format: `%Y-%m-%d %H:%M`")]
     InvalidDateShape(String),
+
+    /// The markdown parser could not parse the event description.
+    #[error("could not parse the description of the event")]
+    CouldNotParseDescription(String),
 }
 
 impl FromStr for Event {
@@ -229,19 +239,16 @@ impl FromStr for Event {
                 .collect()
         });
 
-        let mut nonempty_description: Option<String> = description.map(|d| d.trim().into());
-        if let Some(d) = &nonempty_description {
-            if d.is_empty() {
-                nonempty_description = None;
-            }
-        }
+        let nonempty_description = description.map_or_else(String::new, |d| d.trim().into());
+        let description = to_mdast(&nonempty_description, &ParseOptions::default())
+            .map_err(ParsingError::CouldNotParseDescription)?;
 
         Ok(Self {
             event_type,
             start_date,
             duration,
             title: title.to_owned(),
-            description: nonempty_description,
+            description,
             language,
             speakers,
         })

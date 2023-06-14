@@ -1,9 +1,9 @@
 [package]
 name = "seri"
-version = "0.1.4"
+version = "0.2.0"
 edition = "2021"
 authors = [
-	"Lugrim",
+	"Aurore Poirier",
 	"Camille Le Bon",
 	"Amélie Gonzalez",
 	"Hugo Reymond",
@@ -24,3 +24,4 @@ rand = "0.8.*"
 glob = "0.3.*"
 regex = "1.8.*"
 isolang = { version = "2.*", features = ["serde"] }
+markdown = "1.0.0-alpha.10"
