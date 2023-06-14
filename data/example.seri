@@ -2,7 +2,7 @@ title: Cryptography 101
 date: 2023-04-27 10:10
 duration: 30
 type: talk
-speakers: [alice, bob]
+speakers: alice, bob
 
 Lorem ipsum dolor sit amet
 
@@ -20,7 +20,7 @@ Something to eat
 title: Some other talk
 date: 2023-04-27 15:00
 duration: 45
-speakers: [alice, bob]
+speakers: alice, bob
 
 Lorem ipsum dolor sit amet
 
@@ -28,7 +28,7 @@ Lorem ipsum dolor sit amet
 title: La Lutte
 date: 2023-04-28 10:00
 duration: 240
-speakers: [alice, bob]
+speakers: alice, bob
 type: fun
 
 Board games
@@ -38,6 +38,5 @@ Board games
 title: This is a very long title, about some probably very interesting research topic, however, the title is waaaay to verbose for anyone to care to read
 date: 2023-04-28 15:34
 duration: 60
-speakers: [someone]
 
 Aled

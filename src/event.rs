@@ -76,12 +76,17 @@ pub struct Event {
 }
 
 /// Cut a text to be at most `length` characters
+/// If `length < 3`, will actually be `length + 3` characters
 fn cut_text(text: &str, length: usize) -> String {
-    if text.len() <= length {
-        text.to_owned()
+    let text = text.chars();
+    if text.clone().count() <= length {
+        text.collect::<String>()
     } else {
-        let (short, _) = text.split_at(length - 3);
-        short.to_owned() + "..."
+        if length > 3 { // If possible, take the exact given character count
+            text.take(length - 3)
+        } else { // Otherwise, take 3 characters more
+            text.take(length)
+        }.collect::<String>() + "..."
     }
 }
 
