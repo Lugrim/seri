@@ -36,15 +36,3 @@ Options:
 ## Seri language
 
 See https://github.com/Lugrim/seri/issues/26
-
-## TODO
-
-(To avoid duplicates, this section will be fully deleted soon, please use issues instead)
-
-- [ ] Add backends
-	- [x] HTML
-		- [x] minimal
-		- [ ] Automatically compute the number or days/hours of the seminar
-		- [ ] Handle event not starting on round hours
-		- [ ] Display the date on top of the planning
-		- [ ] Display the abstract next to the planning
